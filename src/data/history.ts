@@ -1,119 +1,122 @@
 import { HistoricalFloodEvent } from '../types';
 
+// Chennai historical floods — coords 13.0–13.08N (13.0-13.08), 80.225–80.255E (80.225-80.255), DEM 6–24m (6-24m), DWR Chennai 0–3h (0-3h)
+// 253 real CMWSSB mains + 760 inferred hierarchical (800 manholes), sewer_type lateral->outfall hierarchy (lateral/house -> branch -> main -> trunk -> outfall)
+
 export const mockHistoricalEvents: HistoricalFloodEvent[] = [
   {
     id: 'hist-01',
-    date: 'Oct 13-14, 2020',
-    title: 'Historic Deep Depression Cloudburst',
-    peakRainfallMm: 191.8,
-    durationHours: 14,
-    affectedZonesCount: 28,
-    maxDepthCm: 140,
-    economicImpact: '₹ 670 Crore',
-    description: 'Unprecedented convective cloudburst over Central & South Hyderabad. Surcharge across entire Musi riverfront and Tolichowki basins.',
+    date: 'Dec 01-02, 2015',
+    title: 'Catastrophic Chennai Floods — Northeast Monsoon & Adyar Breach',
+    peakRainfallMm: 494.0,
+    durationHours: 48,
+    affectedZonesCount: 12,
+    maxDepthCm: 210,
+    economicImpact: '₹ 14,602 Crore',
+    description: 'Record 494mm in 24h (Nungambakkam observatory). Chembarambakkam reservoir release + Adyar River breach inundated T. Nagar, Nungambakkam, Anna Nagar, Velachery (6m low) and Thiruvanmiyur Adyar estuary for 10 days. 800 CMWSSB manholes surcharged.',
     severity: 'critical',
-    pumpsDeployed: 64
+    pumpsDeployed: 120
   },
   {
     id: 'hist-02',
-    date: 'Jul 24, 2023',
-    title: 'Monsoon Low Pressure Inundation Surge',
-    peakRainfallMm: 114.2,
-    durationHours: 8,
-    affectedZonesCount: 19,
-    maxDepthCm: 78,
-    economicImpact: '₹ 180 Crore',
-    description: 'Back-to-back squalls paralyzed Begumpet, Ameerpet, and Secunderabad railway corridors for 7 consecutive hours.',
+    date: 'Dec 04-05, 2023',
+    title: 'Cyclone Michaung — Buckingham Canal & Cooum Overflow',
+    peakRainfallMm: 330.0,
+    durationHours: 24,
+    affectedZonesCount: 10,
+    maxDepthCm: 140,
+    economicImpact: '₹ 2,040 Crore',
+    description: 'Cyclone Michaung dumped 330mm over Chennai DEM 6–24m plain. Velachery Drivers Colony (6m) and T. Nagar Bazullah basin (7m) saw 100–140cm; 253 real CMWSSB mains surcharged, 760 inferred laterals backed up.',
     severity: 'critical',
-    pumpsDeployed: 48
+    pumpsDeployed: 96
   },
   {
     id: 'hist-03',
-    date: 'Sep 02, 2024',
-    title: 'Flash Downpour & Drainage Surcharge',
-    peakRainfallMm: 88.5,
-    durationHours: 4.5,
-    affectedZonesCount: 12,
-    maxDepthCm: 52,
-    economicImpact: '₹ 75 Crore',
-    description: 'High-intensity isolated convective storm cell over Begumpet underpass and Moosarambagh causeway.',
+    date: 'Nov 07-08, 2021',
+    title: 'Northeast Monsoon Depression — Velachery & T. Nagar Waterlogging',
+    peakRainfallMm: 215.0,
+    durationHours: 18,
+    affectedZonesCount: 8,
+    maxDepthCm: 78,
+    economicImpact: '₹ 420 Crore',
+    description: 'Deep depression over Bay of Bengal stalled over DWR Chennai radar zone; Velachery 100ft Road and Anna Nagar 2nd Ave recorded 70–78cm sheet flow on flat 0.0005 slope.',
     severity: 'high',
-    pumpsDeployed: 32
+    pumpsDeployed: 64
   },
   {
     id: 'hist-04',
-    date: 'Aug 17, 2025',
-    title: 'Southwest Monsoon Active Surge',
-    peakRainfallMm: 72.0,
-    durationHours: 5,
-    affectedZonesCount: 8,
-    maxDepthCm: 35,
-    economicImpact: '₹ 38 Crore',
-    description: 'Moderate localized waterlogging on arterial roads, handled via prompt early warning and mobile pump units.',
+    date: 'Oct 27, 2020',
+    title: 'Pre-Monsoon Convective Burst — Nungambakkam Flash',
+    peakRainfallMm: 92.0,
+    durationHours: 6,
+    affectedZonesCount: 5,
+    maxDepthCm: 42,
+    economicImpact: '₹ 85 Crore',
+    description: 'Isolated convective cell tracked by DWR Chennai burst over Nungambakkam–T. Nagar corridor; moderate ponding handled via 300 inlets / 800 manholes clearing.',
     severity: 'moderate',
-    pumpsDeployed: 20
+    pumpsDeployed: 32
   }
 ];
 
 export const mockFloodHistoryTimeframes = {
   '7 Days': {
-    eventsCount: 3,
-    avgRainfallMm: 42.5,
-    avgDurationHours: 2.8,
-    maxDepthRecordedCm: 42,
+    eventsCount: 2,
+    avgRainfallMm: 38.5,
+    avgDurationHours: 3.2,
+    maxDepthRecordedCm: 38,
     chartData: [
-      { label: 'Sep 03', rainfall: 18, events: 0, avgDepthCm: 0 },
-      { label: 'Sep 04', rainfall: 12, events: 0, avgDepthCm: 0 },
-      { label: 'Sep 05', rainfall: 38, events: 1, avgDepthCm: 18 },
-      { label: 'Sep 06', rainfall: 25, events: 0, avgDepthCm: 5 },
-      { label: 'Sep 07', rainfall: 54, events: 2, avgDepthCm: 32 },
-      { label: 'Sep 08', rainfall: 68, events: 3, avgDepthCm: 42 },
-      { label: 'Today', rainfall: 71, events: 4, avgDepthCm: 56 },
+      { label: 'Sep 03', rainfall: 12, events: 0, avgDepthCm: 0 },
+      { label: 'Sep 04', rainfall: 8, events: 0, avgDepthCm: 0 },
+      { label: 'Sep 05', rainfall: 34, events: 1, avgDepthCm: 16 },
+      { label: 'Sep 06', rainfall: 22, events: 0, avgDepthCm: 6 },
+      { label: 'Sep 07', rainfall: 48, events: 1, avgDepthCm: 28 },
+      { label: 'Sep 08', rainfall: 62, events: 2, avgDepthCm: 38 },
+      { label: 'Today', rainfall: 68, events: 3, avgDepthCm: 42 },
     ]
   },
   '30 Days': {
-    eventsCount: 11,
-    avgRainfallMm: 58.2,
-    avgDurationHours: 4.1,
-    maxDepthRecordedCm: 56,
+    eventsCount: 9,
+    avgRainfallMm: 52.4,
+    avgDurationHours: 4.6,
+    maxDepthRecordedCm: 42,
     chartData: [
-      { label: 'Week 1', rainfall: 120, events: 2, avgDepthCm: 25 },
-      { label: 'Week 2', rainfall: 185, events: 4, avgDepthCm: 48 },
-      { label: 'Week 3', rainfall: 95, events: 1, avgDepthCm: 15 },
-      { label: 'Week 4', rainfall: 240, events: 5, avgDepthCm: 56 },
+      { label: 'Week 1', rainfall: 95, events: 1, avgDepthCm: 18 },
+      { label: 'Week 2', rainfall: 165, events: 3, avgDepthCm: 42 },
+      { label: 'Week 3', rainfall: 88, events: 1, avgDepthCm: 14 },
+      { label: 'Week 4', rainfall: 210, events: 4, avgDepthCm: 38 },
     ]
   },
   '3 Months': {
-    eventsCount: 26,
-    avgRainfallMm: 310,
-    avgDurationHours: 5.4,
+    eventsCount: 22,
+    avgRainfallMm: 285,
+    avgDurationHours: 5.8,
     maxDepthRecordedCm: 78,
     chartData: [
-      { label: 'Jul 2026', rainfall: 340, events: 10, avgDepthCm: 78 },
-      { label: 'Aug 2026', rainfall: 285, events: 8, avgDepthCm: 45 },
-      { label: 'Sep 2026', rainfall: 310, events: 8, avgDepthCm: 56 },
+      { label: 'Jul 2026', rainfall: 310, events: 8, avgDepthCm: 58 },
+      { label: 'Aug 2026', rainfall: 255, events: 7, avgDepthCm: 38 },
+      { label: 'Sep 2026', rainfall: 285, events: 7, avgDepthCm: 42 },
     ]
   },
   '1 Year': {
-    eventsCount: 48,
-    avgRainfallMm: 980,
-    avgDurationHours: 6.2,
-    maxDepthRecordedCm: 114,
+    eventsCount: 44,
+    avgRainfallMm: 1420,
+    avgDurationHours: 7.1,
+    maxDepthRecordedCm: 140,
     chartData: [
-      { label: 'Q4 2025', rainfall: 180, events: 4, avgDepthCm: 28 },
-      { label: 'Q1 2026', rainfall: 25, events: 0, avgDepthCm: 0 },
-      { label: 'Q2 2026', rainfall: 140, events: 3, avgDepthCm: 22 },
-      { label: 'Q3 2026', rainfall: 635, events: 22, avgDepthCm: 78 },
+      { label: 'Q4 2025', rainfall: 820, events: 12, avgDepthCm: 68 },
+      { label: 'Q1 2026', rainfall: 22, events: 0, avgDepthCm: 0 },
+      { label: 'Q2 2026', rainfall: 85, events: 2, avgDepthCm: 18 },
+      { label: 'Q3 2026', rainfall: 495, events: 18, avgDepthCm: 42 },
     ]
   }
 };
 
 export const mostFloodProneZonesRanked = [
-  { rank: 1, code: 'Zone 14', name: 'Begumpet Underpass', historicalEvents: 34, avgRecededHours: 4.6, riskIndex: 96 },
-  { rank: 2, code: 'Zone 10', name: 'Moosarambagh Causeway', historicalEvents: 31, avgRecededHours: 6.2, riskIndex: 94 },
-  { rank: 3, code: 'Zone 09', name: 'Tolichowki Nadeem Colony', historicalEvents: 28, avgRecededHours: 5.8, riskIndex: 91 },
-  { rank: 4, code: 'Zone 11', name: 'Malakpet RUB', historicalEvents: 26, avgRecededHours: 3.9, riskIndex: 88 },
-  { rank: 5, code: 'Zone 21', name: 'Ameerpet Metro Junction', historicalEvents: 21, avgRecededHours: 2.7, riskIndex: 82 },
-  { rank: 6, code: 'Zone 12', name: 'Malkajgiri Anandbagh', historicalEvents: 19, avgRecededHours: 3.4, riskIndex: 79 },
-  { rank: 7, code: 'Zone 05', name: 'Kukatpally Highway', historicalEvents: 17, avgRecededHours: 2.1, riskIndex: 75 },
+  { rank: 1, code: 'Zone C04', name: 'Velachery Drivers Colony Low (6m)', historicalEvents: 36, avgRecededHours: 6.8, riskIndex: 96 },
+  { rank: 2, code: 'Zone C01', name: 'T. Nagar Bazullah Road Basin (7m)', historicalEvents: 32, avgRecededHours: 5.4, riskIndex: 93 },
+  { rank: 3, code: 'Zone C03', name: 'Anna Nagar Aminjikarai (9m)', historicalEvents: 27, avgRecededHours: 4.9, riskIndex: 89 },
+  { rank: 4, code: 'Zone C02', name: 'Nungambakkam Seetha Nagar (11m)', historicalEvents: 22, avgRecededHours: 3.2, riskIndex: 81 },
+  { rank: 5, code: 'Zone C05', name: 'Thiruvanmiyur Adyar Estuary (14m)', historicalEvents: 18, avgRecededHours: 2.8, riskIndex: 74 },
+  { rank: 6, code: 'Zone C02b', name: 'Sterling Road / College Road (11m)', historicalEvents: 16, avgRecededHours: 2.5, riskIndex: 71 },
+  { rank: 7, code: 'Zone C05b', name: 'Buckingham Canal Bank (13m)', historicalEvents: 14, avgRecededHours: 2.1, riskIndex: 68 },
 ];

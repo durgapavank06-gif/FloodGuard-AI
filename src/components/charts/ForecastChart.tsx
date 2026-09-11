@@ -7,16 +7,19 @@ interface ForecastChartProps {
   activePoint?: RainfallNowcastPoint;
   onSelectPoint?: (point: RainfallNowcastPoint) => void;
   className?: string;
+  /** Override series (live API). Defaults to bundled demo profile. */
+  data?: RainfallNowcastPoint[];
 }
 
 export const ForecastChart: React.FC<ForecastChartProps> = ({
   activePoint,
   onSelectPoint,
-  className = ''
+  className = '',
+  data,
 }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-  const data = mockRainfallNowcast;
+  const dataSeries = data && data.length > 0 ? data : mockRainfallNowcast;
   const maxRain = 90; // max rainfall scale
   const maxProb = 100; // max probability scale
 
@@ -28,9 +31,9 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
   const chartHeight = height - padding.top - padding.bottom;
 
   // Generate SVG path for rainfall bars and flood probability line
-  const xStep = chartWidth / (data.length - 1);
+  const xStep = chartWidth / (dataSeries.length - 1);
 
-  const probabilityPoints = data.map((d, i) => {
+  const probabilityPoints = dataSeries.map((d, i) => {
     const x = padding.left + i * xStep;
     const y = padding.top + chartHeight - (d.floodProbability / maxProb) * chartHeight;
     return { x, y, ...d };
@@ -111,7 +114,7 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
           })}
 
           {/* Rainfall Column Bars */}
-          {data.map((d, i) => {
+          {dataSeries.map((d, i) => {
             const barWidth = 28;
             const x = padding.left + i * xStep - barWidth / 2;
             const barHeight = (d.rainfallMmHr / maxRain) * chartHeight;

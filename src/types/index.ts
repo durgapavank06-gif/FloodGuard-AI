@@ -3,7 +3,7 @@ export type RiskLevel = 'low' | 'moderate' | 'high' | 'critical';
 export interface Zone {
   id: string;
   code: string; // e.g. "Zone 14"
-  name: string; // e.g. "Begumpet & Prakash Nagar"
+  name: string; // e.g. "T. Nagar & Bazullah Road"
   riskLevel: RiskLevel;
   floodProbability: number; // 0-100%
   expectedOnsetMinutes: number;
@@ -80,7 +80,7 @@ export interface RainfallNowcastPoint {
 export interface RouteOption {
   id: string;
   name: string; // "Route A", "Route B", "Route C"
-  routeName: string; // "via Inner Ring Rd", "via Banjara Hills Elevated Corridor"
+  routeName: string; // "via Inner Ring Rd", "via Sterling Road Flyover"
   distanceKm: number;
   durationMin: number;
   riskLevel: RiskLevel;

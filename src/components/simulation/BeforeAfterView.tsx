@@ -183,7 +183,7 @@ export const BeforeAfterView: React.FC = () => {
           </span>
           <p className="text-slate-300 mt-0.5">
             {results.criticalZones > 20
-              ? 'Severe multi-catchment surcharge expected. Pre-deploy heavy high-discharge mobile dewatering pumps across Begumpet and Musi causeway.'
+              ? 'Severe multi-catchment surcharge expected. Pre-deploy heavy high-discharge mobile dewatering pumps across Velachery and Adyar causeway.'
               : results.criticalZones < 10
               ? 'Moderate localized ponding. Existing gravity culverts sufficient with manual debris clearing at intake grates.'
               : 'Standard monsoon surcharge profile. Keep automated Ruby RUB pump sumps active on emergency diesel standby.'}

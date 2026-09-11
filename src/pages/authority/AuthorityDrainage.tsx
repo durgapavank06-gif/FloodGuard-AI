@@ -3,6 +3,8 @@ import { drainageOverview, mockDrainageConduits } from '../../data/drainage';
 import { StatCard } from '../../components/common/StatCard';
 import { DrainageCard } from '../../components/charts/DrainageCard';
 import { DrainageGraph } from '../../components/charts/DrainageGraph';
+import { NetworkFlowGraph } from '../../components/drainage/NetworkFlowGraph';
+import { DataModeToggle } from '../../components/common/DataModeToggle';
 import {
   GitBranch,
   AlertTriangle,
@@ -56,6 +58,7 @@ export const AuthorityDrainage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          <DataModeToggle compact />
           <div className="rounded-xl bg-purple-950/50 border border-purple-500/30 px-3.5 py-2 text-xs font-mono">
             <span className="text-slate-400">Total System Discharge: </span>
             <strong className="text-purple-300">245.8 m³/s</strong>
@@ -97,6 +100,9 @@ export const AuthorityDrainage: React.FC = () => {
           icon={<CheckCircle2 className="h-5 w-5 text-emerald-400" />}
         />
       </div>
+
+      {/* Live manhole→conduit flow graph (real-time hydraulic animation) */}
+      <NetworkFlowGraph />
 
       {/* Drainage Network Directed Graph Visualization */}
       <DrainageGraph />

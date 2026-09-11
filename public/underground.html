@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Underground — Chennai | GPU Water Flow</title>
+<script src="https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/Cesium.js"></script>
+<link href="https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#020208}
+#cesiumContainer{width:100%;height:100%}
+#bar{position:fixed;top:0;left:0;right:0;height:48px;z-index:20;background:rgba(9,9,11,0.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;padding:0 14px;gap:10px;color:#e4e4e7;font:12px Geist,system-ui}
+#bar a{color:#38bdf8;text-decoration:none;font:11px JetBrains Mono}
+#ctrl{position:fixed;top:56px;right:12px;z-index:15;background:rgba(15,15,18,0.9);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px 12px;color:#e4e4e7;font:11px JetBrains Mono;min-width:210px}
+#ctrl .row{display:flex;justify-content:space-between;align-items:center;margin:6px 0}
+#ctrl label{opacity:0.7;font-size:10px;letter-spacing:0.06em}
+#ctrl input[type=range]{width:90px}
+#hud{position:fixed;bottom:12px;left:12px;z-index:15;background:rgba(9,9,11,0.85);border:1px solid rgba(34,211,238,0.2);border-radius:10px;padding:8px 10px;color:#a5f3fc;font:10px JetBrains Mono;line-height:1.6}
+#hud b{color:#22d3ee}
+</style>
+</head>
+<body>
+<div id="cesiumContainer"></div>
+<div id="bar"><span style="font-weight:700;letter-spacing:0.08em">UNDERGROUND</span><span style="opacity:0.5">— 253 real + 760 inferred @ -10m | GPU Flow</span><a href="/" style="margin-left:auto">← BACK</a><a href="/chennai-map.html" style="margin-left:12px">SURFACE ↑</a></div>
+<div id="ctrl">
+  <div style="font-weight:700;letter-spacing:0.1em;font-size:10px;margin-bottom:6px">WATER SIM — RTX 4050 GPU</div>
+  <div class="row"><label>Pipe Flow</label><input id="pipeToggle" type="checkbox" checked></div>
+  <div class="row"><label>Rainfall</label><input id="rainSlider" type="range" min="10" max="140" value="72"><span id="rainVal" style="color:#38bdf8">72 mm/h</span></div>
+  <div class="row"><label>LOD</label><span id="lodVal" style="opacity:0.6">auto</span></div>
+  <div style="opacity:0.5;font-size:9px;margin-top:6px">No Entity-per-particle • Primitive + ParticleSystem</div>
+</div>
+<div id="hud">Precomputed • <b id="flowCount">0</b> pipes flowing • <b id="overflowCount">0</b> overflowing • <b id="particleCount">0</b> GPU particles</div>
+<script src="chennai-data.js"></script>
+<script>
+Cesium.Ion.defaultAccessToken=undefined;
+// --- Viewer (same as before, RTX 4050 keeps high quality) ---
+const viewer=new Cesium.Viewer('cesiumContainer',{
+  terrainProvider:new Cesium.EllipsoidTerrainProvider(),
+  baseLayer:new Cesium.ImageryLayer(new Cesium.UrlTemplateImageryProvider({url:'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', maximumLevel:16})),
+  baseLayerPicker:false,geocoder:false,homeButton:false,sceneModePicker:false,navigationHelpButton:false,animation:false,timeline:false,fullscreenButton:false,vrButton:false,selectionIndicator:false,infoBox:false,shouldAnimate:true});
+viewer.scene.screenSpaceCameraController.enableCollisionDetection=false;
+viewer.scene.screenSpaceCameraController.minimumZoomDistance=-100;
+viewer.scene.screenSpaceCameraController.maximumZoomDistance=30000;
+viewer.scene.globe.translucency.enabled=true;
+viewer.scene.globe.translucency.frontFaceAlpha=0.32;
+viewer.scene.globe.translucency.backFaceAlpha=0.32;
+viewer.scene.globe.depthTestAgainstTerrain=false;
+viewer.imageryLayers.get(0).alpha=0.88;
+viewer.scene.requestRenderMode=false; viewer.scene.maximumRenderTimeChange=1/60;
+
+// --- Original pipes/manholes (kept visible, Entity — not particles) ---
+function pipeColor(mm){ if(mm>=1200) return Cesium.Color.fromCssColorString('#0369a1'); if(mm>=700) return Cesium.Color.fromCssColorString('#0284c7'); if(mm>=350) return Cesium.Color.fromCssColorString('#0ea5e9'); return Cesium.Color.fromCssColorString('#60a5fa'); }
+function widthFor(mm){ if(mm>=1200) return 4; if(mm>=700) return 3; if(mm>=350) return 2; return 1; }
+function infColor(t){ if(t==='trunk/main') return Cesium.Color.fromCssColorString('#0284c7'); if(t==='secondary/collector') return Cesium.Color.fromCssColorString('#0ea5e9'); if(t==='local/branch') return Cesium.Color.fromCssColorString('#60a5fa'); return Cesium.Color.fromCssColorString('#93c5fd'); }
+function infWidth(t){ if(t==='trunk/main') return 4; if(t==='secondary/collector') return 3; if(t==='local/branch') return 2; return 1; }
+DRAINAGE_NETWORK.forEach(p=>{
+  const pts=p.coords.map(c=>Cesium.Cartesian3.fromDegrees(c[0],c[1],-10));
+  const w=widthFor(p.mm);
+  viewer.entities.add({polyline:{positions:pts, width:w+2, material:Cesium.Color.fromCssColorString('#3f3f46'), depthFailMaterial:Cesium.Color.fromCssColorString('#3f3f46'), clampToGround:false}});
+  viewer.entities.add({polyline:{positions:pts, width:Math.max(1,w*0.5), material:pipeColor(p.mm), depthFailMaterial:pipeColor(p.mm), clampToGround:false}});
+});
+if(typeof INFERRED_NETWORK!=='undefined'){
+  INFERRED_NETWORK.forEach(f=>{
+    const pos=f.coords.length===2?[Cesium.Cartesian3.fromDegrees(f.coords[0][0],f.coords[0][1],-10),Cesium.Cartesian3.fromDegrees(f.coords[1][0],f.coords[1][1],-10)]:f.coords.map(c=>Cesium.Cartesian3.fromDegrees(c[0],c[1],-10));
+    const w=infWidth(f.sewer_type);
+    viewer.entities.add({polyline:{positions:pos, width:w+2, material:Cesium.Color.fromCssColorString('#3f3f46'), depthFailMaterial:Cesium.Color.fromCssColorString('#3f3f46'), clampToGround:false}});
+    viewer.entities.add({polyline:{positions:pos, width:Math.max(1,w*0.4), material:infColor(f.sewer_type).withAlpha(0.9*f.connection_confidence), depthFailMaterial:infColor(f.sewer_type).withAlpha(0.9*f.connection_confidence), clampToGround:false}});
+  });
+}
+MANHOLES.forEach(m=>{
+  const [lon,lat]=m.coords;
+  viewer.entities.add({polyline:{positions:[Cesium.Cartesian3.fromDegrees(lon,lat,0.2),Cesium.Cartesian3.fromDegrees(lon,lat,-10)], width:1.2, material:Cesium.Color.fromCssColorString('#22d3ee').withAlpha(0.85), depthFailMaterial:Cesium.Color.fromCssColorString('#22d3ee').withAlpha(0.85), clampToGround:false}});
+  viewer.entities.add({position:Cesium.Cartesian3.fromDegrees(lon,lat,0.3), point:{pixelSize:3, color:Cesium.Color.fromCssColorString('#38bdf8'), outlineColor:Cesium.Color.WHITE, outlineWidth:1}});
+});
+
+// ============================================================
+// GPU WATER SYSTEM — no Entity per particle, batched buffers
+// ============================================================
+let rainfallIntensity = 72; // mm/h, driven by slider / chennai-data.js
+if(typeof RAINFALL_PROFILE!=='undefined' && RAINFALL_PROFILE.length) rainfallIntensity = Math.max(...RAINFALL_PROFILE.map(r=>r.intensity));
+// Precompute cache
+const pipeCache = []; // {id, positions, length, flow, speed, density}
+const manholeCache = new Map(); // id -> {coords, elevation, inflow, capacity, excess, state, surfaceDir, surfaceDist}
+let maxFlow = 1;
+
+// 1. Precompute pipe flow (DRAINAGE_NETWORK + INFERRED_NETWORK)
+function precomputePipes(){
+  pipeCache.length=0; maxFlow=1;
+  const all = [...DRAINAGE_NETWORK.map(p=>({...p, isReal:true})), ...(typeof INFERRED_NETWORK!=='undefined'? INFERRED_NETWORK.map(f=>({...f, isReal:false, mm: f.sewer_type==='trunk/main'?900: f.sewer_type==='secondary/collector'?500: f.sewer_type==='local/branch'?300:200})) : [])];
+  all.forEach(p=>{
+    const a=Cesium.Cartesian3.fromDegrees(p.coords[0][0],p.coords[0][1],0);
+    const b=Cesium.Cartesian3.fromDegrees(p.coords[p.coords.length-1][0],p.coords[p.coords.length-1][1],0);
+    const len=Cesium.Cartesian3.distance(a,b);
+    const mm = p.mm || 400;
+    const slope = p.slope || 0.0007;
+    // flow ~ rainfall * slope * diameter_factor
+    const flow = rainfallIntensity * (0.5 + slope*800) * (mm/600) * (p.isReal?1:0.7);
+    maxFlow = Math.max(maxFlow, flow);
+    pipeCache.push({id:p.id, positions:p.coords, len, mm, flow, isReal:p.isReal, connection: p.connection_confidence||1});
+  });
+  pipeCache.forEach(p=>{ p.speed = 2.5 + (p.flow/maxFlow)*14; p.density = p.isReal ? (p.flow/maxFlow) : (p.flow/maxFlow)*0.6; p.intensity = p.flow/maxFlow; });
+}
+function inflowForManhole(mid){
+  // sum flows of pipes incident to manhole (approx by distance <60m)
+  const m = MANHOLES.find(x=>x.id===mid); if(!m) return rainfallIntensity*0.3;
+  let sum=0;
+  pipeCache.forEach(p=>{
+    const d0 = Math.hypot(p.positions[0][0]-m.coords[0], p.positions[0][1]-m.coords[1]);
+    const d1 = Math.hypot(p.positions[p.positions.length-1][0]-m.coords[0], p.positions[p.positions.length-1][1]-m.coords[1]);
+    if(d0<0.0007 || d1<0.0007) sum+= p.flow*0.12;
+  });
+  return sum + rainfallIntensity*0.18 + (m.elevation<8? 8:0);
+}
+function precomputeManholes(){
+  manholeCache.clear();
+  MANHOLES.forEach(m=>{
+    const inflow = inflowForManhole(m.id);
+    const capacity = 38 + m.elevation*1.8 + (Math.random()*6); // base + elevation
+    const excess = inflow - capacity;
+    let state='normal';
+    if(excess>12) state='critical';
+    else if(excess>4) state='overloaded';
+    else if(inflow/capacity>0.75) state='stressed';
+    // surface downhill: find lowest neighbor within ~120m
+    let best=m.coords, bestElev=m.elevation, dist=0;
+    MANHOLES.forEach(o=>{
+      if(o.id===m.id) return;
+      const d=Math.hypot(o.coords[0]-m.coords[0], o.coords[1]-m.coords[1]);
+      if(d<0.0012 && o.elevation < bestElev){ best=o.coords; bestElev=o.elevation; dist=d*111000; }
+    });
+    const dir = bestElev < m.elevation ? [best[0]-m.coords[0], best[1]-m.coords[1]] : null;
+    if(dir){ const L=Math.hypot(dir[0],dir[1])||1; dir[0]/=L; dir[1]/=L; }
+    const floodDepth = excess>0 ? Math.min(42, excess*1.8 + (10 - m.elevation)*0.6) : 0; // cm
+    manholeCache.set(m.id, {coords:m.coords, elevation:m.elevation, inflow, capacity, excess, state, dir, dist: dist||40, floodDepth});
+  });
+}
+precomputePipes(); precomputeManholes();
+document.getElementById('flowCount').textContent = pipeCache.filter(p=>p.intensity>0.15).length;
+document.getElementById('overflowCount').textContent = [...manholeCache.values()].filter(m=>m.excess>0).length;
+
+// --- Custom flow material (GPU scroll, single uniform time) ---
+Cesium.Material.FlowLineType='FlowLine';
+Cesium.Material._materialCache.addMaterial(Cesium.Material.FlowLineType,{
+  fabric:{
+    type:Cesium.Material.FlowLineType,
+    uniforms:{color:new Cesium.Color(0.13,0.83,0.95,0.95), speed:8, time:0, repeat:12},
+    source:`
+      czm_material czm_getMaterial(czm_materialInput materialInput){
+        czm_material material = czm_getDefaultMaterial(materialInput);
+        float s = materialInput.s;
+        float t = fract(time * speed * 0.008);
+        float pattern = fract(s * repeat - t * 6.0);
+        float dash = smoothstep(0.0,0.08,pattern) * smoothstep(1.0,0.92,pattern);
+        float glow = 0.75 + 0.25*sin(s* 80.0 - time*0.06);
+        material.diffuse = color.rgb * (0.9 + 0.3*glow);
+        material.alpha = color.a * (0.55 + 0.45*dash);
+        return material;
+      }`
+  }
+});
+
+// --- Pipe flow primitives (ONE primitive per network, batched GeometryInstances — not Entities) ---
+let flowPrimReal=null, flowPrimInf=null, flowMatReal, flowMatInf;
+function createPipeFlowPrimitives(){
+  if(flowPrimReal){ viewer.scene.primitives.remove(flowPrimReal); viewer.scene.primitives.remove(flowPrimInf); }
+  const realInst=[], infInst=[];
+  pipeCache.forEach(p=>{
+    if(p.intensity<0.08) return; // LOD pre-filter
+    const positions = p.positions.map(c=>Cesium.Cartesian3.fromDegrees(c[0],c[1], -9.45));
+    const w = p.isReal ? (p.mm>=700?3.2: p.mm>=350?2.2:1.4) : (p.mm>=500?2.4:1.2);
+    const alpha = p.isReal ? (0.55 + 0.45*p.intensity) : (0.35 + 0.35*p.intensity)*p.connection;
+    const inst = new Cesium.GeometryInstance({
+      geometry:new Cesium.PolylineGeometry({positions, width: w, vertexFormat: Cesium.PolylineMaterialAppearance.VERTEX_FORMAT}),
+      attributes:{ color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.fromCssColorString('#22d3ee').withAlpha(alpha)) }
+    });
+    (p.isReal?realInst:infInst).push(inst);
+  });
+  flowMatReal = new Cesium.Material({fabric:{type:Cesium.Material.FlowLineType, uniforms:{color:Cesium.Color.fromCssColorString('#22d3ee').withAlpha(0.95), speed:10, time:0, repeat:14}}});
+  flowMatInf = new Cesium.Material({fabric:{type:Cesium.Material.FlowLineType, uniforms:{color:Cesium.Color.fromCssColorString('#7dd3fc').withAlpha(0.75), speed:7, time:0, repeat:10}}});
+  flowPrimReal = new Cesium.Primitive({
+    geometryInstances: realInst,
+    appearance:new Cesium.PolylineMaterialAppearance({material:flowMatReal, translucent:true}),
+    asynchronous:false
+  });
+  flowPrimInf = new Cesium.Primitive({
+    geometryInstances: infInst,
+    appearance:new Cesium.PolylineMaterialAppearance({material:flowMatInf, translucent:true}),
+    asynchronous:false
+  });
+  if(realInst.length) viewer.scene.primitives.add(flowPrimReal);
+  if(infInst.length) viewer.scene.primitives.add(flowPrimInf);
+}
+createPipeFlowPrimitives();
+
+// --- Manhole rising water (ONE primitive, many Ellipse instances — batched, not Entities) ---
+let manholeWaterPrim=null;
+function createManholeWater(){
+  if(manholeWaterPrim) viewer.scene.primitives.remove(manholeWaterPrim);
+  const instances=[];
+  [...manholeCache.entries()].forEach(([id, d])=>{
+    if(d.state==='normal') return;
+    const level = d.state==='critical'? 1.8 : d.state==='overloaded'? 1.2 : 0.6; // meters
+    const radius = d.state==='critical'? 7.5 : d.state==='overloaded'?5.5:3.5;
+    const alpha = d.state==='critical'?0.38: d.state==='overloaded'?0.26:0.16;
+    // rising level is visualised as ellipse at manhole top, height offset encodes level
+    instances.push(new Cesium.GeometryInstance({
+      geometry:new Cesium.EllipseGeometry({center:Cesium.Cartesian3.fromDegrees(d.coords[0],d.coords[1], 0.35+level*0.35), semiMajorAxis:radius, semiMinorAxis:radius, height:0.35+level*0.4, stRotation:0, vertexFormat:Cesium.EllipsoidSurfaceAppearance.VERTEX_FORMAT}),
+      attributes:{ color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.fromCssColorString(d.state==='critical'?'#ef4444':'#22d3ee').withAlpha(alpha)) }
+    }));
+    // ripple ring (second ellipse slightly larger, more transparent)
+    if(d.state!=='stressed'){
+      instances.push(new Cesium.GeometryInstance({
+        geometry:new Cesium.EllipseGeometry({center:Cesium.Cartesian3.fromDegrees(d.coords[0],d.coords[1], 0.32), semiMajorAxis:radius*1.45, semiMinorAxis:radius*1.45, height:0.33, vertexFormat:Cesium.EllipsoidSurfaceAppearance.VERTEX_FORMAT}),
+        attributes:{ color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.fromCssColorString('#06b6d4').withAlpha(alpha*0.45)) }
+      }));
+    }
+  });
+  if(!instances.length) return;
+  const waterMat = new Cesium.Material({fabric:{type:'Water', uniforms:{baseWaterColor:new Cesium.Color(0.06,0.68,0.86,0.55), blendColor:new Cesium.Color(0.06,0.84,0.95,0.35), specularMap:'https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/Assets/Textures/waterNormals.jpg', normalMap:'https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/Assets/Textures/waterNormals.jpg', frequency:900, animationSpeed:0.06, amplitude:1.2}}});
+  // Use EllipsoidSurfaceAppearance with water fabric — GPU animated normals
+  manholeWaterPrim = new Cesium.Primitive({
+    geometryInstances:instances,
+    appearance:new Cesium.EllipsoidSurfaceAppearance({material:waterMat, translucent:true}),
+    asynchronous:false
+  });
+  viewer.scene.primitives.add(manholeWaterPrim);
+}
+createManholeWater();
+
+// --- SURFACE: directional stream + accumulation (REPLACES large elliptical puddles) ---
+// Old: large cyan Ellipse centered on manhole (flat marker) — REMOVED per prompt 1
+let streamPrim=null, accumPrim=null;
+let surfaceStreamMat=null, surfaceAccumMat=null;
+function createSurfaceWater(){
+  if(streamPrim) viewer.scene.primitives.remove(streamPrim);
+  if(accumPrim) viewer.scene.primitives.remove(accumPrim);
+  const streamInsts=[], accumInsts=[];
+  [...manholeCache.values()].forEach(d=>{
+    if(d.excess<=0 || d.floodDepth<2) return;
+    const dir = d.dir || [0.7,0.3]; // fallback downhill
+    const normLen = Math.hypot(dir[0],dir[1])||1; dir[0]/=normLen; dir[1]/=normLen;
+    // Buildup: stream length ∝ excess + floodDepth, not instant huge puddle
+    const severity = d.state==='critical'? 1 : d.state==='overloaded'? 0.65 : 0.35;
+    const streamLen = Math.min(42, 7 + d.floodDepth*0.9 + d.excess*0.7) * (0.7 + severity*0.6); // meters
+    const steps = Math.max(4, Math.floor(streamLen/5));
+    // Irregular width: narrow at manhole, widens downstream
+    const baseW = d.state==='critical'? 1.8 : d.state==='overloaded'? 1.2 : 0.7;
+    // Build polyline points from manhole outward downhill with subtle turbulence
+    const pts=[];
+    for(let i=0;i<=steps;i++){
+      const t=i/steps;
+      const along = t*streamLen;
+      // irregular lateral offset (turbulence) — deterministic per manhole+step, not random per frame
+      const hash = Math.sin((d.coords[0]*9973 + d.coords[1]*9913 + i*57)) * 0.5;
+      const lateral = hash * (1.2 + t*2.2) * (d.state==='critical'?1:0.6);
+      const perpX = -dir[1], perpY = dir[0];
+      const lon = d.coords[0] + dir[0]*(along*0.00000898) + perpX*lateral*0.00000898;
+      const lat = d.coords[1] + dir[1]*(along*0.00000898) + perpY*lateral*0.00000898;
+      pts.push(Cesium.Cartesian3.fromDegrees(lon, lat, 0.24));
+    }
+    const w = baseW + Math.min(2.2, d.floodDepth*0.06);
+    const alpha = Math.min(0.52, 0.18 + d.excess*0.018 + d.floodDepth*0.008);
+    streamInsts.push(new Cesium.GeometryInstance({
+      geometry:new Cesium.PolylineGeometry({positions:pts, width:w, vertexFormat:Cesium.PolylineMaterialAppearance.VERTEX_FORMAT}),
+      attributes:{ color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.fromCssColorString('#0ea5e9').withAlpha(alpha)) }
+    }));
+    // Accumulation: small irregular polygon downstream (NOT large centered ellipse) — slower, deeper, subtle ripples
+    if(d.floodDepth>5){
+      const endLon = d.coords[0] + dir[0]*(streamLen*0.00000898*0.95);
+      const endLat = d.coords[1] + dir[1]*(streamLen*0.00000898*0.95);
+      const accR = Math.min(9, 3.5 + d.floodDepth*0.22 + d.excess*0.15);
+      // irregular polygon: perturb ellipse points
+      const polyPts=[];
+      const sides=9;
+      for(let k=0;k<sides;k++){
+        const ang = (k/sides)*Math.PI*2;
+        const r = accR * (0.75 + 0.5*Math.abs(Math.sin((d.coords[0]*12+k)*1.3)));
+        const rx = r*1.2, ry=r*0.85;
+        polyPts.push(Cesium.Cartesian3.fromDegrees(endLon + Math.cos(ang)*rx*0.00000898, endLat + Math.sin(ang)*ry*0.00000898, 0.21));
+      }
+      accumInsts.push(new Cesium.GeometryInstance({
+        geometry:new Cesium.PolygonGeometry({polygonHierarchy:new Cesium.PolygonHierarchy(polyPts), height:0.21, vertexFormat:Cesium.EllipsoidSurfaceAppearance.VERTEX_FORMAT}),
+        attributes:{ color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.fromCssColorString('#0369a1').withAlpha( Math.min(0.32, 0.10 + d.floodDepth*0.009) )) }
+      }));
+    }
+  });
+  if(streamInsts.length){
+    surfaceStreamMat = new Cesium.Material({fabric:{type:Cesium.Material.FlowLineType, uniforms:{color:Cesium.Color.fromCssColorString('#22d3ee').withAlpha(0.88), speed:5.5, time:0, repeat:8}}});
+    streamPrim = new Cesium.Primitive({
+      geometryInstances:streamInsts,
+      appearance:new Cesium.PolylineMaterialAppearance({material:surfaceStreamMat, translucent:true}),
+      asynchronous:false
+    });
+    viewer.scene.primitives.add(streamPrim);
+  }
+  if(accumInsts.length){
+    const accWaterMat = new Cesium.Material({fabric:{type:'Water', uniforms:{baseWaterColor:Cesium.Color.fromCssColorString('#0c4a6e').withAlpha(0.38), blendColor:Cesium.Color.fromCssColorString('#0e7490').withAlpha(0.22), normalMap:'https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/Assets/Textures/waterNormals.jpg', frequency:420, animationSpeed:0.022, amplitude:0.55}}});
+    accumPrim = new Cesium.Primitive({
+      geometryInstances:accumInsts,
+      appearance:new Cesium.EllipsoidSurfaceAppearance({material:accWaterMat, translucent:true}),
+      asynchronous:false
+    });
+    viewer.scene.primitives.add(accumPrim);
+  }
+}
+createSurfaceWater();
+
+// --- Overflow: GPU ParticleSystems (ONE system per LOD tier, reused — not Entity per particle) ---
+// Tiny white dot texture (GPU, no external request)
+const dotCanvas=document.createElement('canvas'); dotCanvas.width=16; dotCanvas.height=16;
+const g=dotCanvas.getContext('2d'); const grd=g.createRadialGradient(8,8,0,8,8,8); grd.addColorStop(0,'rgba(255,255,255,1)'); grd.addColorStop(0.4,'rgba(125,211,252,0.9)'); grd.addColorStop(1,'rgba(14,165,233,0)'); g.fillStyle=grd; g.fillRect(0,0,16,16);
+const dotImage=dotCanvas.toDataURL();
+
+// Single reusable ParticleSystem for overflow (we move its modelMatrix to top N critical manholes via LOD, not one per manhole)
+let overflowSystem=null;
+function createOverflowSystem(){
+  if(overflowSystem) viewer.scene.primitives.remove(overflowSystem);
+  overflowSystem = new Cesium.ParticleSystem({
+    image: dotImage,
+    startColor: Cesium.Color.fromCssColorString('#e0f2fe').withAlpha(0.95),
+    endColor: Cesium.Color.fromCssColorString('#22d3ee').withAlpha(0.0),
+    startScale: 3.2, endScale: 0.2,
+    minimumParticleLife: 0.9, maximumParticleLife: 1.6,
+    minimumSpeed: 4.5, maximumSpeed: 9.5,
+    imageSize: new Cesium.Cartesian2(9,9),
+    emissionRate: 0, // driven by excessFlow & LOD in central loop
+    lifetime: 16.0,
+    emitter: new Cesium.ConeEmitter(Cesium.Math.toRadians(22)),
+    updateCallback: function(p, dt){
+      // GPU-friendly gravity + drag, no per-particle Entity
+      const m = 9.8*dt; p.velocity.z -= m*0.55;
+      p.velocity.x *= 0.995; p.velocity.y *= 0.995;
+    }
+  });
+  viewer.scene.primitives.add(overflowSystem);
+}
+createOverflowSystem();
+
+let currentOverflowTargets=[]; // top critical manholes reused
+function updateOverflowTargets(){
+  const sorted=[...manholeCache.entries()].filter(([,d])=>d.excess>0).sort((a,b)=>b[1].excess-a[1].excess);
+  currentOverflowTargets = sorted.slice(0,5).map(([id,d])=>({id, ...d})); // max 5 animated
+  document.getElementById('overflowCount').textContent = sorted.length;
+}
+
+// --- Centralized animation & LOD (ONE loop, precomputed values only) ---
+let t=0;
+let pipeVisible=true;
+document.getElementById('pipeToggle').addEventListener('change',e=>{ pipeVisible=e.target.checked; if(flowPrimReal) flowPrimReal.show=pipeVisible; if(flowPrimInf) flowPrimInf.show=pipeVisible; });
+document.getElementById('rainSlider').addEventListener('input',e=>{
+  rainfallIntensity=parseInt(e.target.value,10);
+  document.getElementById('rainVal').textContent=rainfallIntensity+' mm/h';
+  precomputePipes(); precomputeManholes();
+  createPipeFlowPrimitives(); createManholeWater(); createSurfaceWater(); updateOverflowTargets();
+  document.getElementById('flowCount').textContent = pipeCache.filter(p=>p.intensity>0.15).length;
+});
+
+function lodFactor(){
+  const h = viewer.camera.positionCartographic ? viewer.camera.positionCartographic.height : 1200;
+  if(h>9000) return {label:'FAR', flow:0.35, overflow:0.25, surface:true};
+  if(h>2800) return {label:'MID', flow:0.7, overflow:0.6, surface:true};
+  if(h>600) return {label:'NEAR', flow:1.0, overflow:1.0, surface:true};
+  return {label:'CLOSE', flow:1.15, overflow:1.3, surface:true};
+}
+
+viewer.scene.preUpdate.addEventListener(function(scene, time){
+  t += scene.deltaTime || 0.016;
+  const lod = lodFactor();
+  document.getElementById('lodVal').textContent = lod.label;
+  // Pipe flow time uniform (GPU scroll, no JS per-particle)
+  if(flowMatReal) flowMatReal.uniforms.time = t*1000;
+  if(flowMatInf) flowMatInf.uniforms.time = t*1000;
+  if(surfaceStreamMat) surfaceStreamMat.uniforms.time = t*1000;
+  // Manhole water + accumulation normals animate automatically via Water material (GPU)
+
+  // Overflow: move single ParticleSystem to most critical manhole, emissionRate ∝ excessFlow * LOD
+  if(currentOverflowTargets.length && overflowSystem){
+    // cycle through top targets every 1.2s for visibility of multiple sites without many systems
+    const idx = Math.floor(t/1.2) % currentOverflowTargets.length;
+    const target = currentOverflowTargets[idx];
+    const h = 0.6 + Math.min(4.5, target.excess*0.45);
+    const mat = Cesium.Transforms.eastNorthUpToFixedFrame(Cesium.Cartesian3.fromDegrees(target.coords[0], target.coords[1], h));
+    overflowSystem.modelMatrix = mat;
+    overflowSystem.emitter = new Cesium.ConeEmitter(Cesium.Math.toRadians(18 + Math.min(18, target.excess*1.2)));
+    // emissionRate is GPU particle count, not Entities — small number of objects, many visual particles
+    const base = Math.min(85, 18 + target.excess*7 + target.floodDepth*0.8);
+    overflowSystem.emissionRate = base * lod.overflow * (pipeVisible?1:0.6);
+    document.getElementById('particleCount').textContent = Math.round(overflowSystem.emissionRate*1.4);
+  } else if(overflowSystem){
+    overflowSystem.emissionRate=0;
+    document.getElementById('particleCount').textContent='0';
+  }
+});
+
+// Initial camera (same as before)
+viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(80.24,13.06,1200), orientation:{heading:0, pitch:Cesium.Math.toRadians(-55), roll:0}, duration:1});
+setTimeout(()=>{ viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(80.24,13.06,-28), orientation:{heading:0, pitch:Cesium.Math.toRadians(18), roll:0}, duration:2}); },1300);
+updateOverflowTargets();
+
+// Verify no Entity per particle
+console.log('%cGPU water: no Entity per particle','color:#22d3ee;font-weight:bold');
+console.log('Entities (pipes+manholes):', viewer.entities.values.length, 'Primitives (flow+surface):', viewer.scene.primitives.length, 'ParticleSystems: 1 (reused)');
+</script>
+</body>
+</html>

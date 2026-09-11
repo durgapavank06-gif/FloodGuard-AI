@@ -11,7 +11,7 @@ export const DrainageGraph: React.FC<DrainageGraphProps> = ({
   onSelectNode,
   className = ''
 }) => {
-  const [selectedNode, setSelectedNode] = useState<string | null>('MH-01');
+  const [selectedNode, setSelectedNode] = useState<string | null>('MH-C01-A');
 
   return (
     <div className={`rounded-2xl border border-white/10 bg-command-950 p-5 shadow-2xl relative overflow-hidden ${className}`}>
@@ -80,9 +80,9 @@ export const DrainageGraph: React.FC<DrainageGraphProps> = ({
             </marker>
           </defs>
 
-          {/* Drainage Edges (Conduits with directed flow) */}
+          {/* Drainage Edges (Conduits with directed flow) — Chennai CMWSSB */}
           <g id="conduitEdges">
-            {/* MH-07 to MH-03 (Jubilee to Ameerpet) */}
+            {/* MH-C03-A to MH-C02-A (Anna Nagar to Nungambakkam) */}
             <line
               x1="270"
               y1="120"
@@ -93,7 +93,7 @@ export const DrainageGraph: React.FC<DrainageGraphProps> = ({
               markerEnd="url(#flowArrowNormal)"
             />
 
-            {/* MH-03 to MH-01 (Ameerpet to Begumpet Prakash Nagar) */}
+            {/* MH-C02-A to MH-C01-A (Nungambakkam to T. Nagar G.N. Chetty) */}
             <line
               x1="400"
               y1="150"
@@ -105,7 +105,7 @@ export const DrainageGraph: React.FC<DrainageGraphProps> = ({
               markerEnd="url(#flowArrowNormal)"
             />
 
-            {/* MH-01 to MH-02 (Prakash Nagar to Begumpet RUB - Surcharged Backflow) */}
+            {/* MH-C01-A to MH-C01-B (G.N. Chetty to Bazullah RUB - Surcharged Backflow) */}
             <line
               x1="480"
               y1="110"
@@ -117,7 +117,7 @@ export const DrainageGraph: React.FC<DrainageGraphProps> = ({
               className="animate-pulse"
             />
 
-            {/* MH-08 to MH-04 (Cyber towers to Shaikpet) */}
+            {/* MH-C03-B to MH-C04-A (Aminjikarai to Velachery low) */}
             <line
               x1="180"
               y1="220"
@@ -128,7 +128,7 @@ export const DrainageGraph: React.FC<DrainageGraphProps> = ({
               markerEnd="url(#flowArrowNormal)"
             />
 
-            {/* MH-04 to Musi Basin Outfall */}
+            {/* MH-C04-A to Adyar Basin Outfall */}
             <line
               x1="280"
               y1="280"
@@ -140,7 +140,7 @@ export const DrainageGraph: React.FC<DrainageGraphProps> = ({
               markerEnd="url(#flowArrowSurcharge)"
             />
 
-            {/* MH-05 to MH-06 (Malakpet to Moosarambagh Sluice - Critical) */}
+            {/* MH-C05-A to MH-C05-B (Lattice Bridge to Buckingham Canal - Critical) */}
             <line
               x1="550"
               y1="270"
@@ -160,16 +160,16 @@ export const DrainageGraph: React.FC<DrainageGraphProps> = ({
             </text>
           </g>
 
-          {/* Graph Nodes (Manholes / Drop Inlets) */}
+          {/* Graph Nodes (Manholes / Drop Inlets) — Chennai DEM 6–24m */}
           {[
-            { id: 'MH-07', name: 'MH-01-A (Jubilee Hills)', x: 270, y: 120, status: 'normal', elev: 578, depth: 1.2 },
-            { id: 'MH-03', name: 'MH-21-A (Ameerpet)', x: 400, y: 150, status: 'near_limit', elev: 516, depth: 3.1 },
-            { id: 'MH-01', name: 'MH-14-A (Prakash Nagar)', x: 480, y: 110, status: 'surcharge', elev: 494, depth: 4.1 },
-            { id: 'MH-02', name: 'MH-14-B (Begumpet RUB)', x: 550, y: 170, status: 'surcharge', elev: 493, depth: 3.8 },
-            { id: 'MH-08', name: 'MH-08-A (Cyber Towers)', x: 180, y: 220, status: 'normal', elev: 550, depth: 1.8 },
-            { id: 'MH-04', name: 'MH-09-A (Shaikpet Outfall)', x: 280, y: 280, status: 'surcharge', elev: 499, depth: 4.3 },
-            { id: 'MH-05', name: 'MH-11-A (Malakpet Vent)', x: 550, y: 270, status: 'surcharge', elev: 488, depth: 3.9 },
-            { id: 'MH-06', name: 'MH-10-A (Moosarambagh Sluice)', x: 650, y: 310, status: 'critical', elev: 481, depth: 5.1 },
+            { id: 'MH-C03-A', name: 'MH-C03-A (Anna Nagar)', x: 270, y: 120, status: 'normal', elev: 9.1, depth: 1.2 },
+            { id: 'MH-C02-A', name: 'MH-C02-A (Nungambakkam)', x: 400, y: 150, status: 'near_limit', elev: 11.0, depth: 3.1 },
+            { id: 'MH-C01-A', name: 'MH-C01-A (G.N. Chetty)', x: 480, y: 110, status: 'surcharge', elev: 7.2, depth: 4.1 },
+            { id: 'MH-C01-B', name: 'MH-C01-B (Bazullah RUB)', x: 550, y: 170, status: 'surcharge', elev: 7.0, depth: 3.8 },
+            { id: 'MH-C03-B', name: 'MH-C03-B (Aminjikarai)', x: 180, y: 220, status: 'normal', elev: 9.4, depth: 1.8 },
+            { id: 'MH-C04-A', name: 'MH-C04-A (Velachery Low)', x: 280, y: 280, status: 'surcharge', elev: 6.2, depth: 4.3 },
+            { id: 'MH-C05-A', name: 'MH-C05-A (Lattice Bridge)', x: 550, y: 270, status: 'surcharge', elev: 14.0, depth: 3.9 },
+            { id: 'MH-C05-B', name: 'MH-C05-B (Buckingham Canal)', x: 650, y: 310, status: 'critical', elev: 13.5, depth: 5.1 },
           ].map((node) => {
             const isSelected = selectedNode === node.id;
             const nodeColor =

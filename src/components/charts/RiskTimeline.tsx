@@ -8,13 +8,17 @@ interface RiskTimelineProps {
   selectedPoint: RainfallNowcastPoint;
   onSelectPoint: (point: RainfallNowcastPoint) => void;
   className?: string;
+  /** Override series (live API). Defaults to bundled demo profile. */
+  data?: RainfallNowcastPoint[];
 }
 
 export const RiskTimeline: React.FC<RiskTimelineProps> = ({
   selectedPoint,
   onSelectPoint,
-  className = ''
+  className = '',
+  data,
 }) => {
+  const series = data && data.length > 0 ? data : mockRainfallNowcast;
   return (
     <div className={`space-y-3 ${className}`}>
       <div className="flex items-center justify-between">
@@ -28,7 +32,7 @@ export const RiskTimeline: React.FC<RiskTimelineProps> = ({
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-        {mockRainfallNowcast.map((pt) => {
+        {series.map((pt) => {
           const isSelected = selectedPoint.timeOffsetMinutes === pt.timeOffsetMinutes;
 
           const borderStyle = {

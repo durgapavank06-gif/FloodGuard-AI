@@ -1,41 +1,68 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ForecastChart } from '../../components/charts/ForecastChart';
 import { RiskTimeline } from '../../components/charts/RiskTimeline';
-import { mockRainfallNowcast } from '../../data/rainfall';
 import { RainfallNowcastPoint } from '../../types';
 import { RiskBadge } from '../../components/common/RiskBadge';
+import { DataModeToggle } from '../../components/common/DataModeToggle';
+import { useNowcast } from '../../hooks/useNowcast';
 import {
   TrendingUp,
   Clock,
   CloudRain,
   Droplets,
   AlertTriangle,
-  ShieldCheck,
-  Compass,
-  ArrowRight
+  ArrowRight,
+  RefreshCw
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export const CitizenForecast: React.FC = () => {
-  const { navigate } = useApp();
-  const [selectedPoint, setSelectedPoint] = useState<RainfallNowcastPoint>(
-    mockRainfallNowcast[2] // default to +60 min peak
-  );
+  const { navigate, addToast } = useApp();
+  const { series, loading, error, isLive, refetch } = useNowcast();
+  const [selectedPoint, setSelectedPoint] = useState<RainfallNowcastPoint>(series[2]);
+
+  useEffect(() => {
+    setSelectedPoint((prev) => series.find((p) => p.timeOffsetMinutes === prev.timeOffsetMinutes) || series[2] || series[0]);
+  }, [series]);
+
+  useEffect(() => {
+    if (error) addToast('Live feed unreachable', error, 'warning');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error]);
+
+  if (!selectedPoint) return null;
 
   return (
     <div className="space-y-6 pb-12">
       {/* Title & Subtitle */}
-      <div className="border-b border-white/5 pb-4">
-        <div className="flex items-center gap-2 text-xs font-semibold text-cyan-400">
-          <TrendingUp className="h-4 w-4" />
-          <span>0–3 Hour Hydrological Nowcasting Window</span>
+      <div className="border-b border-white/5 pb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-semibold text-cyan-400">
+            <TrendingUp className="h-4 w-4" />
+            <span>0–3 Hour Hydrological Nowcasting Window</span>
+            {isLive && (
+              <span className="rounded-full bg-emerald-500/15 border border-emerald-500/40 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                ● LIVE DWR ADVECTION
+              </span>
+            )}
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">
+            Flood Forecast
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+            Understand how flood risk may change over the next 3 hours as rainfall moves across the drainage network.
+          </p>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">
-          Flood Forecast
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-400 mt-1">
-          Understand how flood risk may change over the next 3 hours as rainfall moves across the drainage network.
-        </p>
+        <div className="flex items-center gap-2">
+          <DataModeToggle loading={loading} />
+          <button
+            onClick={refetch}
+            className="rounded-xl border border-white/10 bg-command-900 p-2 text-slate-300 hover:text-white transition-colors"
+            title="Refresh nowcast"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* Interactive Timeline Selector */}
@@ -43,6 +70,7 @@ export const CitizenForecast: React.FC = () => {
         <RiskTimeline
           selectedPoint={selectedPoint}
           onSelectPoint={setSelectedPoint}
+          data={series}
         />
       </div>
 
@@ -50,6 +78,7 @@ export const CitizenForecast: React.FC = () => {
       <ForecastChart
         activePoint={selectedPoint}
         onSelectPoint={setSelectedPoint}
+        data={series}
       />
 
       {/* Selected Time Interval Deep Dive */}
@@ -130,7 +159,7 @@ export const CitizenForecast: React.FC = () => {
               </h4>
               <p className="text-xs text-slate-300 mt-0.5">
                 {selectedPoint.riskLevel === 'critical'
-                  ? 'Avoid all non-essential road travel. Low-lying railway underpasses (Begumpet, Malakpet) will experience dangerous submergence.'
+                  ? 'Avoid all non-essential road travel. Low-lying underpasses (Bazullah Road, Velachery 100ft dip) will experience dangerous submergence.'
                   : selectedPoint.riskLevel === 'high'
                   ? 'Heavy surface runoff expected. Use elevated flyovers instead of surface roads. Watch out for open manholes.'
                   : 'Maintain standard vigilance. Normal transit conditions across primary corridors.'}

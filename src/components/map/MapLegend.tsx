@@ -57,7 +57,7 @@ export const MapLegend: React.FC<MapLegendProps> = ({ className = '' }) => {
         </div>
         <div className="flex items-center gap-2">
           <span className="h-1.5 w-4 bg-blue-500 rounded-full" />
-          <span>Waterbodies (Musi / Hussain Sagar)</span>
+          <span>Waterbodies (Cooum / Adyar / Bay of Bengal)</span>
         </div>
       </div>
     </div>

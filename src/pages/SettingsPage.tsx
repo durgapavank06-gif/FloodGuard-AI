@@ -121,10 +121,11 @@ export const SettingsPage: React.FC = () => {
                 onChange={(e) => setDefaultBasin(e.target.value)}
                 className="w-full rounded-xl bg-command-950 border border-white/10 px-3 py-2 text-white focus:outline-none focus:border-cyan-500"
               >
-                <option value="zone-14">Zone 14 - Begumpet Underpass</option>
-                <option value="zone-10">Zone 10 - Moosarambagh Causeway</option>
-                <option value="zone-09">Zone 09 - Tolichowki Nadeem Colony</option>
-                <option value="zone-21">Zone 21 - Ameerpet Metro Junction</option>
+                <option value="zone-c04">Zone C04 - Velachery 100ft Dip</option>
+                <option value="zone-c01">Zone C01 - T. Nagar Bazullah Basin</option>
+                <option value="zone-c03">Zone C03 - Anna Nagar 2nd Ave</option>
+                <option value="zone-c02">Zone C02 - Nungambakkam Sterling Rd</option>
+                <option value="zone-c05">Zone C05 - Thiruvanmiyur Adyar</option>
               </select>
             </div>
 

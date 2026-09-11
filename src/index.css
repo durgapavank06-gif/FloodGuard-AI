@@ -76,4 +76,16 @@
   .glow-cyan {
     box-shadow: 0 0 20px -3px rgba(6, 182, 212, 0.4);
   }
+
+  /* Animated water-flow dashes for the manhole→conduit flow graph */
+  @keyframes flowdash {
+    to {
+      stroke-dashoffset: -28;
+    }
+  }
+  .flow-anim {
+    animation-name: flowdash;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
 }

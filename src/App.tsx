@@ -1,6 +1,7 @@
 import React from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { SimulationProvider } from './context/SimulationContext';
+import { DataModeProvider } from './context/DataModeContext';
 import { Navbar } from './components/common/Navbar';
 import { Sidebar } from './components/common/Sidebar';
 import { MobileBottomNav } from './components/common/MobileBottomNav';
@@ -128,9 +129,11 @@ const AppRouter: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <AppProvider>
-      <SimulationProvider>
-        <AppRouter />
-      </SimulationProvider>
+      <DataModeProvider>
+        <SimulationProvider>
+          <AppRouter />
+        </SimulationProvider>
+      </DataModeProvider>
     </AppProvider>
   );
 };

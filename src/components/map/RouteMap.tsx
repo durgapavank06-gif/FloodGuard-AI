@@ -35,7 +35,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
             <line x1="500" y1="50" x2="500" y2="350" />
           </g>
 
-          {/* Hussain Sagar Lake outline for geographical reference */}
+          {/* Cooum Estuary outline for geographical reference */}
           <path
             d="M 440 240 C 470 230 500 245 505 270 C 510 295 480 310 460 305 C 440 300 430 280 435 260 Z"
             fill="#0369a1"
@@ -44,7 +44,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
             strokeWidth="1"
           />
           <text x="445" y="275" fill="#38bdf8" fontSize="8" opacity="0.6">
-            Hussain Sagar
+            Cooum Estuary
           </text>
 
           {/* ROUTE A (Shortest, High Risk, Red) */}
@@ -74,7 +74,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
             <circle cx="450" cy="210" r="14" fill="#ef4444" opacity="0.2" className="animate-ping" />
             <circle cx="450" cy="210" r="8" fill="#ef4444" stroke="#0b111d" strokeWidth="2" />
             <text x="450" y="235" textAnchor="middle" fill="#fca5a5" fontSize="8" fontWeight="bold">
-              Begumpet RUB (42cm Submerged)
+              Bazullah Underpass (38cm)
             </text>
           </g>
 
@@ -92,7 +92,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
             />
             <circle cx="350" cy="115" r="5" fill="#f59e0b" stroke="#0b111d" strokeWidth="1.5" />
             <text x="350" y="105" textAnchor="middle" fill="#fde68a" fontSize="8">
-              Sanath Nagar (16cm runoff)
+              Drivers Colony (18cm runoff)
             </text>
           </g>
 
@@ -119,7 +119,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
             {/* Elevated flyover indicator */}
             <rect x="300" y="278" width="140" height="12" rx="3" fill="#065f46" stroke="#10b981" strokeWidth="1" opacity="0.8" />
             <text x="370" y="287" textAnchor="middle" fill="#a7f3d0" fontSize="8" fontWeight="bold">
-              Panjagutta Elevated Flyover (Flood-Safe)
+              Sterling Rd Flyover (Flood-Safe)
             </text>
           </g>
 
@@ -129,17 +129,17 @@ export const RouteMap: React.FC<RouteMapProps> = ({
             <circle r="3" fill="#ffffff" />
             <rect x="-35" y="-28" width="70" height="18" rx="4" fill="#0f172a" stroke="#06b6d4" strokeWidth="1" />
             <text x="0" y="-16" textAnchor="middle" fill="#38bdf8" fontSize="8" fontWeight="bold">
-              START (Hitec City)
+              START (T. Nagar)
             </text>
           </g>
 
-          {/* DESTINATION PIN (Secunderabad) */}
+          {/* DESTINATION PIN (Nungambakkam) */}
           <g transform="translate(580, 190)">
             <circle r="9" fill="#8b5cf6" stroke="#070b12" strokeWidth="2" />
             <circle r="3" fill="#ffffff" />
             <rect x="-42" y="-28" width="84" height="18" rx="4" fill="#0f172a" stroke="#8b5cf6" strokeWidth="1" />
             <text x="0" y="-16" textAnchor="middle" fill="#c4b5fd" fontSize="8" fontWeight="bold">
-              END (Secunderabad)
+              END (Nungambakkam)
             </text>
           </g>
         </svg>

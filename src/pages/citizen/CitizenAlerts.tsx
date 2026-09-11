@@ -123,7 +123,7 @@ export const CitizenAlerts: React.FC = () => {
       ) : (
         <EmptyState
           title="No Alerts Found"
-          description={`There are currently no ${activeFilter} warnings in the Hyderabad metropolitan area.`}
+          description={`There are currently no ${activeFilter} warnings in the Chennai metropolitan area.`}
           actionLabel="Show All Active Alerts"
           onAction={() => setActiveFilter('all')}
         />

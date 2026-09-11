@@ -18,7 +18,7 @@ export const RiskCard: React.FC<RiskCardProps> = ({
   probability,
   expectedOnsetMinutes,
   rainfallMmHr,
-  locationName = 'Hyderabad (Zone 14 - Begumpet Catchment)',
+  locationName = 'Chennai (Zone C04 - Velachery Catchment)',
   onViewMap,
   className = ''
 }) => {

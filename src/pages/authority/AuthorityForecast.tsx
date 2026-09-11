@@ -1,46 +1,88 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ForecastChart } from '../../components/charts/ForecastChart';
 import { RiskTimeline } from '../../components/charts/RiskTimeline';
-import { mockRainfallNowcast } from '../../data/rainfall';
-import { RainfallNowcastPoint } from '../../types';
+import { RainfallNowcastPoint, RiskLevel } from '../../types';
 import { RiskBadge } from '../../components/common/RiskBadge';
+import { DataModeToggle } from '../../components/common/DataModeToggle';
 import { mockZones } from '../../data/zones';
 import { useApp } from '../../context/AppContext';
+import { useDataMode } from '../../context/DataModeContext';
+import { useNowcast } from '../../hooks/useNowcast';
+import { api, ApiZone } from '../../services/api';
 import {
   TrendingUp,
-  Clock,
-  CloudRain,
-  Droplets,
   AlertTriangle,
-  ArrowRight,
-  GitBranch,
-  Waves,
-  ShieldAlert,
-  ChevronRight
+  ChevronRight,
+  RefreshCw
 } from 'lucide-react';
 
 export const AuthorityForecast: React.FC = () => {
-  const { navigate, setSelectedZone } = useApp();
-  const [selectedPoint, setSelectedPoint] = useState<RainfallNowcastPoint>(
-    mockRainfallNowcast[2] // +60 min peak
-  );
+  const { navigate, setSelectedZone, addToast } = useApp();
+  const { mode, apiUrl } = useDataMode();
+  const { series, loading, error, isLive, refetch } = useNowcast();
+  const [selectedPoint, setSelectedPoint] = useState<RainfallNowcastPoint>(series[2]);
+  const [liveZones, setLiveZones] = useState<ApiZone[] | null>(null);
 
-  const highestRiskAreas = [
-    { zoneId: 'zone-14', code: 'Zone 14', name: 'Begumpet Underpass', prob: 91, depth: 42, onset: 27, level: 'critical' as const },
-    { zoneId: 'zone-10', code: 'Zone 10', name: 'Moosarambagh Causeway', prob: 93, depth: 56, onset: 18, level: 'critical' as const },
-    { zoneId: 'zone-09', code: 'Zone 09', name: 'Tolichowki Basin', prob: 84, depth: 38, onset: 34, level: 'critical' as const },
-    { zoneId: 'zone-11', code: 'Zone 11', name: 'Malakpet RUB', prob: 90, depth: 46, onset: 22, level: 'critical' as const },
-    { zoneId: 'zone-21', code: 'Zone 21', name: 'Ameerpet Junction', prob: 79, depth: 29, onset: 45, level: 'high' as const },
-    { zoneId: 'zone-17', code: 'Zone 17', name: 'Khairatabad Circle', prob: 72, depth: 24, onset: 52, level: 'high' as const },
+  useEffect(() => {
+    setSelectedPoint((prev) => series.find((p) => p.timeOffsetMinutes === prev.timeOffsetMinutes) || series[2] || series[0]);
+  }, [series]);
+
+  useEffect(() => {
+    if (error) addToast('Live feed unreachable', error, 'warning');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error]);
+
+  // Live coupled-model priority basins in REAL mode
+  useEffect(() => {
+    if (mode === 'fake') {
+      setLiveZones(null);
+      return;
+    }
+    let cancelled = false;
+    api
+      .floodZones(apiUrl, mode)
+      .then((res) => {
+        if (!cancelled && res.zones?.length) setLiveZones(res.zones);
+      })
+      .catch(() => {
+        if (!cancelled) setLiveZones(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, apiUrl]);
+
+  const fallbackAreas = [
+    { zoneId: 'zone-c01', code: 'Zone C01', name: 'T. Nagar & Bazullah Road Basin', prob: 89, depth: 38, onset: 22, level: 'critical' as const },
+    { zoneId: 'zone-c04', code: 'Zone C04', name: 'Velachery & Drivers Colony Low', prob: 91, depth: 42, onset: 18, level: 'critical' as const },
+    { zoneId: 'zone-c03', code: 'Zone C03', name: 'Anna Nagar & Aminjikarai', prob: 85, depth: 34, onset: 26, level: 'critical' as const },
+    { zoneId: 'zone-c02', code: 'Zone C02', name: 'Nungambakkam & Seetha Nagar', prob: 76, depth: 28, onset: 35, level: 'high' as const },
+    { zoneId: 'zone-c05', code: 'Zone C05', name: 'Thiruvanmiyur & Adyar', prob: 54, depth: 16, onset: 70, level: 'moderate' as const },
   ];
+
+  const highestRiskAreas = liveZones
+    ? liveZones.slice(0, 6).map((z) => ({
+        zoneId: z.id,
+        code: z.code,
+        name: z.name,
+        prob: Math.round(z.floodProbability),
+        depth: Math.round(z.estimatedDepthCm),
+        onset: z.expectedOnsetMinutes >= 900 ? -1 : Math.round(z.expectedOnsetMinutes),
+        level: z.riskLevel as RiskLevel,
+      }))
+    : fallbackAreas;
 
   const handleInspectZone = (zoneId: string) => {
     const zone = mockZones.find((z) => z.id === zoneId);
     if (zone) {
       setSelectedZone(zone);
       navigate('/authority/map');
+    } else {
+      navigate('/authority/map');
     }
   };
+
+  if (!selectedPoint) return null;
 
   return (
     <div className="space-y-6 pb-12">
@@ -50,6 +92,11 @@ export const AuthorityForecast: React.FC = () => {
           <div className="flex items-center gap-2 text-xs font-mono font-bold text-cyan-400">
             <TrendingUp className="h-4 w-4" />
             <span>0–3 HOUR LEAD TIME HYDRODYNAMIC PREDICTIVE ENGINE</span>
+            {isLive && (
+              <span className="rounded-full bg-emerald-500/15 border border-emerald-500/40 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                ● LIVE COUPLED MODEL
+              </span>
+            )}
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">
             3-Hour Flood Nowcasting
@@ -59,7 +106,15 @@ export const AuthorityForecast: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <DataModeToggle loading={loading} />
+          <button
+            onClick={refetch}
+            className="rounded-xl border border-white/10 bg-command-900 p-2 text-slate-300 hover:text-white transition-colors"
+            title="Refresh nowcast"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
           <button
             onClick={() => navigate('/authority/simulation')}
             className="rounded-xl bg-cyan-600 hover:bg-cyan-500 px-4 py-2 text-xs font-bold text-white transition-colors"
@@ -74,6 +129,7 @@ export const AuthorityForecast: React.FC = () => {
         <RiskTimeline
           selectedPoint={selectedPoint}
           onSelectPoint={setSelectedPoint}
+          data={series}
         />
       </div>
 
@@ -81,6 +137,7 @@ export const AuthorityForecast: React.FC = () => {
       <ForecastChart
         activePoint={selectedPoint}
         onSelectPoint={setSelectedPoint}
+        data={series}
       />
 
       {/* Section: Highest Risk Areas Matrix */}
@@ -89,7 +146,7 @@ export const AuthorityForecast: React.FC = () => {
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-rose-400" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-white font-mono">
-              Highest Risk Priority Basins
+              Highest Risk Priority Basins {liveZones ? '(live coupled model)' : '(demo profile)'}
             </h3>
           </div>
           <span className="text-xs text-slate-400">Ranked by coupled inundation probability</span>
@@ -123,7 +180,9 @@ export const AuthorityForecast: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 block font-sans">Onset</span>
-                  <span className="text-sm font-bold text-amber-300">{area.onset}m</span>
+                  <span className="text-sm font-bold text-amber-300">
+                    {area.onset < 0 ? '—' : `${area.onset}m`}
+                  </span>
                 </div>
               </div>
 

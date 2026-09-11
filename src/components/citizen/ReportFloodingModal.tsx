@@ -23,7 +23,7 @@ export const ReportFloodingModal: React.FC = () => {
       setIsReportModalOpen(false);
       addToast(
         'Flood Report Received',
-        'Citizen ground observation verified and ingested into coupled hydraulic nowcast solver. Thank you for keeping Hyderabad safe!',
+        'Citizen ground observation verified and ingested into coupled hydraulic nowcast solver. Thank you for keeping Chennai safe!',
         'success'
       );
       // Reset form

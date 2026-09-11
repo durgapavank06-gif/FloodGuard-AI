@@ -12,6 +12,7 @@ import {
   ChevronRight,
   ExternalLink
 } from 'lucide-react';
+import { DataModeToggle } from './DataModeToggle';
 
 export const Navbar: React.FC = () => {
   const {
@@ -133,10 +134,13 @@ export const Navbar: React.FC = () => {
 
         {/* Right Controls & Role Switcher */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* REAL / FAKE data mode toggle */}
+          {!isPublic && <DataModeToggle compact />}
+
           {/* Location badge */}
           <div className="hidden sm:flex items-center gap-1.5 rounded-lg bg-command-900 border border-white/10 px-2.5 py-1.5 text-xs text-slate-300">
             <MapPin className="h-3.5 w-3.5 text-rose-400" />
-            <span className="font-semibold text-white">Hyderabad</span>
+            <span className="font-semibold text-white">Chennai</span>
             <span className="text-[10px] text-slate-400 font-mono">19:15 IST</span>
           </div>
 

@@ -32,7 +32,7 @@ export const CitizenMap: React.FC = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search zones, underpasses, streets (e.g. Begumpet, Ameerpet)..."
+            placeholder="Search zones, underpasses, streets (e.g. Bazullah, Velachery)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full rounded-lg bg-command-950 border border-white/10 pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:border-cyan-500 focus:outline-none"

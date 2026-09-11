@@ -23,6 +23,8 @@ interface InteractiveMapProps {
   isAuthority?: boolean;
   className?: string;
   showControls?: boolean;
+  /** Override zone metrics (live coupled model). Geometry falls back to mock inventory. */
+  zones?: Zone[];
 }
 
 export const InteractiveMap: React.FC<InteractiveMapProps> = ({
@@ -30,7 +32,8 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   selectedZoneId,
   isAuthority = false,
   className = '',
-  showControls = true
+  showControls = true,
+  zones,
 }) => {
   const { selectedZone, setSelectedZone, addToast } = useApp();
 
@@ -49,8 +52,11 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     historical: false
   });
 
+  const displayZones = zones && zones.length > 0 ? zones : mockZones;
+  const isLiveData = displayZones !== mockZones;
+
   const activeZone = selectedZoneId
-    ? mockZones.find((z) => z.id === selectedZoneId) || selectedZone
+    ? displayZones.find((z) => z.id === selectedZoneId) || selectedZone
     : selectedZone;
 
   const handleZoneClick = (zone: Zone) => {
@@ -59,10 +65,10 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   };
 
   const handleLocateMe = () => {
-    const defaultZone = mockZones.find(z => z.id === 'zone-14') || mockZones[0];
+    const defaultZone = displayZones.find(z => z.id === 'zone-14') || displayZones[0];
     if (onSelectZone) onSelectZone(defaultZone);
     else setSelectedZone(defaultZone);
-    addToast('Location Acquired', 'Centered on Begumpet, Hyderabad (Zone 14)', 'info');
+    addToast('Location Acquired', `Centered on ${defaultZone.name} (${defaultZone.code})`, 'info');
   };
 
   const toggleLayer = (layerKey: keyof typeof layers) => {
@@ -93,6 +99,11 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
               <stop offset="100%" stopColor="#0284c7" stopOpacity="0.9" />
             </linearGradient>
 
+            <linearGradient id="seaGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#0369a1" stopOpacity="0.0" />
+              <stop offset="100%" stopColor="#0284c7" stopOpacity="0.55" />
+            </linearGradient>
+
             <radialGradient id="radarRainStorm" cx="480" cy="270" r="180" gradientUnits="userSpaceOnUse">
               <stop offset="0%" stopColor="#ef4444" stopOpacity="0.35" />
               <stop offset="35%" stopColor="#f97316" stopOpacity="0.25" />
@@ -111,40 +122,72 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
             <rect width="800" height="520" fill="url(#elevationLines)" opacity="0.8" />
           )}
 
-          {/* Natural Water Bodies */}
+          {/* Natural Water Bodies — Chennai: Cooum & Adyar rivers, Pallikaranai Marsh, Velachery Lake, Bay of Bengal */}
           <g id="waterbodies" className="transition-opacity duration-300">
-            {/* Hussain Sagar Lake */}
+            {/* Bay of Bengal (eastern seaboard) */}
+            <rect x="655" y="0" width="145" height="520" fill="url(#seaGradient)" pointerEvents="none" />
+            <text x="745" y="260" fill="#7dd3fc" fontSize="11" fontWeight="bold" letterSpacing="2" transform="rotate(90 745 260)" opacity="0.8">
+              BAY OF BENGAL
+            </text>
+
+            {/* Buckingham Canal (north-south, along the coast) */}
+            <path
+              d="M 635 30 L 630 250 L 635 490"
+              fill="none"
+              stroke="#38bdf8"
+              strokeWidth="2.5"
+              strokeDasharray="7,4"
+              opacity="0.7"
+            />
+            <text x="612" y="250" fill="#7dd3fc" fontSize="8" fontWeight="600" transform="rotate(90 612 250)" opacity="0.8">
+              Buckingham Canal
+            </text>
+
+            {/* Cooum River (west → central → sea) */}
+            <path
+              d="M 20 262 Q 160 242 300 256 T 520 278 T 660 302"
+              fill="none"
+              stroke="url(#riverGradient)"
+              strokeWidth="7"
+              strokeLinecap="round"
+              opacity="0.9"
+            />
+            <text x="150" y="248" fill="#7dd3fc" fontSize="9" fontWeight="bold" letterSpacing="1">
+              COOUM RIVER
+            </text>
+
+            {/* Pallikaranai Marsh */}
             <path
               d="M 460 300 C 480 290 510 305 515 330 C 520 355 490 370 470 365 C 450 360 440 340 445 320 Z"
               fill="url(#lakeGradient)"
               stroke="#38bdf8"
               strokeWidth="1.5"
             />
-            <text x="465" y="338" fill="#bae6fd" fontSize="9" fontWeight="600" letterSpacing="0.5">
-              Hussain Sagar
+            <text x="448" y="338" fill="#bae6fd" fontSize="9" fontWeight="600" letterSpacing="0.5">
+              Pallikaranai Marsh
             </text>
 
-            {/* Durgam Cheruvu */}
+            {/* Velachery Lake */}
             <path
               d="M 180 305 C 195 295 210 300 215 315 C 220 330 200 340 185 335 C 170 330 165 315 180 305 Z"
               fill="url(#lakeGradient)"
               stroke="#38bdf8"
               strokeWidth="1"
             />
-            <text x="175" y="325" fill="#bae6fd" fontSize="8" fontWeight="500">
-              Durgam Cheruvu
+            <text x="168" y="325" fill="#bae6fd" fontSize="8" fontWeight="500">
+              Velachery Lake
             </text>
 
-            {/* Musi River Corridor */}
+            {/* Adyar River Corridor */}
             <path
-              d="M 20 440 Q 200 420 350 435 T 600 450 T 800 445"
+              d="M 20 445 Q 220 425 380 440 T 620 450 T 780 445"
               fill="none"
               stroke="url(#riverGradient)"
               strokeWidth="12"
               strokeLinecap="round"
             />
-            <text x="640" y="470" fill="#7dd3fc" fontSize="10" fontWeight="bold" letterSpacing="1">
-              MUSI RIVER
+            <text x="620" y="472" fill="#7dd3fc" fontSize="10" fontWeight="bold" letterSpacing="1">
+              ADYAR RIVER
             </text>
           </g>
 
@@ -168,10 +211,10 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
             </g>
           )}
 
-          {/* Road Network Layer */}
+          {/* Road Network Layer — Chennai arterials */}
           {layers.roads && (
             <g id="roadNetwork" opacity="0.6">
-              {/* Outer Ring Road (ORR) Arc */}
+              {/* Chennai Bypass Arc (west) */}
               <path
                 d="M 30 100 Q 80 460 220 500"
                 fill="none"
@@ -180,10 +223,10 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                 strokeDasharray="8,2"
               />
               <text x="50" y="180" fill="#94a3b8" fontSize="8" transform="rotate(70 50 180)">
-                Outer Ring Road
+                Chennai Bypass
               </text>
 
-              {/* NH-65 Arterial Highway */}
+              {/* Anna Salai Arterial */}
               <path
                 d="M 120 80 L 440 270 L 650 350 L 780 410"
                 fill="none"
@@ -191,35 +234,41 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
                 strokeWidth="3"
               />
               <text x="210" y="125" fill="#cbd5e1" fontSize="9" fontWeight="bold">
-                NH-65 Expressway
+                Anna Salai
               </text>
 
-              {/* Sardar Patel (SP) Road */}
+              {/* G.N. Chetty Road (T. Nagar east-west) */}
               <path
                 d="M 380 265 L 620 260"
                 fill="none"
                 stroke="#64748b"
                 strokeWidth="3.5"
               />
-              <text x="495" y="255" fill="#e2e8f0" fontSize="8" fontWeight="bold">
-                SP Road
+              <text x="488" y="255" fill="#e2e8f0" fontSize="8" fontWeight="bold">
+                G.N. Chetty Rd
               </text>
 
-              {/* Inner Ring Road */}
+              {/* 100 Feet Road, Velachery */}
               <path
                 d="M 300 360 L 460 380 L 590 390"
                 fill="none"
                 stroke="#475569"
                 strokeWidth="2.5"
               />
+              <text x="238" y="356" fill="#94a3b8" fontSize="8" fontWeight="600">
+                100 Feet Rd
+              </text>
 
-              {/* Banjara / Jubilee Link */}
+              {/* Sterling Road Link */}
               <path
                 d="M 220 270 L 370 330 L 440 340"
                 fill="none"
                 stroke="#475569"
                 strokeWidth="2.5"
               />
+              <text x="292" y="308" fill="#94a3b8" fontSize="8" fontWeight="600">
+                Sterling Rd
+              </text>
             </g>
           )}
 
@@ -270,7 +319,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
           {/* Flood Risk Zones (Polygons & Markers) */}
           {layers.floodRisk && (
             <g id="floodRiskZones">
-              {mockZones.map((zone) => {
+              {displayZones.map((zone) => {
                 const isSelected = activeZone?.id === zone.id;
                 const isHovered = hoveredZone?.id === zone.id;
 
@@ -566,8 +615,8 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
       {/* Real-time Status Overlay (Bottom Right) */}
       <div className="absolute bottom-4 right-4 z-10 hidden md:flex items-center gap-2 rounded-lg bg-command-950/80 px-3 py-1.5 border border-white/5 backdrop-blur-md text-[11px] text-slate-400">
-        <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-        <span>16 Active Micro-Basins Monitored</span>
+        <span className={`flex h-2 w-2 rounded-full animate-pulse ${isLiveData ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+        <span>{isLiveData ? 'Live coupled-model zones' : '16 Active Micro-Basins Monitored'}</span>
       </div>
     </div>
   );

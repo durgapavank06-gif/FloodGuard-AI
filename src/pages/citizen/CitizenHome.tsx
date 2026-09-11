@@ -44,8 +44,8 @@ export const CitizenHome: React.FC = () => {
         <div className="flex items-center gap-2 rounded-xl bg-command-900 px-3.5 py-2 border border-white/10">
           <MapPin className="h-4 w-4 text-rose-400" />
           <div>
-            <span className="text-xs font-bold text-white block">Hyderabad Metro</span>
-            <span className="text-[10px] text-slate-400 font-mono">Begumpet Catchment</span>
+            <span className="text-xs font-bold text-white block">Chennai Metro</span>
+            <span className="text-[10px] text-slate-400 font-mono">Velachery Catchment</span>
           </div>
         </div>
       </div>
@@ -56,7 +56,7 @@ export const CitizenHome: React.FC = () => {
         probability={78}
         expectedOnsetMinutes={42}
         rainfallMmHr={48}
-        locationName="Hyderabad • Zone 21 / Zone 14 Catchment Corridors"
+        locationName="Chennai • Zone C04 / Zone C01 Catchment Corridors"
         onViewMap={() => navigate('/citizen/map')}
       />
 
@@ -162,7 +162,7 @@ export const CitizenHome: React.FC = () => {
             </div>
 
             <p className="text-xs text-slate-300">
-              Convective cloud cluster intensifying over central Hyderabad basin with expected peak at 20:00 IST.
+              Convective cloud cluster intensifying over central Chennai basin with expected peak at 20:00 IST.
             </p>
 
             {/* Hourly Sparkline Bars */}

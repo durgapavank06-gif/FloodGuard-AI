@@ -1,7 +1,7 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { StatCard } from '../../components/common/StatCard';
-import { InteractiveMap } from '../../components/map/InteractiveMap';
+import { CesiumLiveMap } from '../../components/map/CesiumLiveMap';
 import { ZoneDetailsPanel } from '../../components/map/ZoneDetailsPanel';
 import { AlertCard } from '../../components/common/AlertCard';
 import {
@@ -20,15 +20,10 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { cityOverviewStats } from '../../data/zones';
+import { LiveDashboardStrip } from '../../components/dashboard/LiveDashboardStrip';
 
 export const AuthorityDashboard: React.FC = () => {
-  const {
-    navigate,
-    selectedZone,
-    setSelectedZone,
-    alerts,
-    updateAlertStatus
-  } = useApp();
+  const { navigate, selectedZone, setSelectedZone, alerts, updateAlertStatus } = useApp();
 
   const criticalAlerts = alerts.filter(
     (a) => a.severity === 'critical' || a.severity === 'high'
@@ -47,7 +42,7 @@ export const AuthorityDashboard: React.FC = () => {
             Urban Flood Monitoring Center
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Hyderabad Metropolitan Region • Coupled 2D-DEM & 1D-Graph Solver
+            Chennai Metropolitan Region • Coupled 5×5m DEM & 253+760 Graph • 6–24m
           </p>
         </div>
 
@@ -92,11 +87,14 @@ export const AuthorityDashboard: React.FC = () => {
           title="Earliest Flood Onset"
           value={cityOverviewStats.earliestFloodOnsetMinutes}
           unit="min"
-          subtitle="Zone 14 (Begumpet) RUB"
+          subtitle="Zone C04 (Velachery) dip"
           riskHighlight="cyan"
           icon={<Clock className="h-5 w-5 text-cyan-400" />}
         />
       </div>
+
+      {/* LIVE COUPLED-MODEL STRIP (REAL mode) / KPI cards stay as demo baseline */}
+      <LiveDashboardStrip />
 
       {/* MAIN SECTION: LIVE FLOOD RISK MAP (Large Component) */}
       <div className="rounded-2xl border border-white/10 bg-command-900/90 p-4 sm:p-5 shadow-card-dark">
@@ -125,12 +123,7 @@ export const AuthorityDashboard: React.FC = () => {
         {/* Map Canvas + Zone Details Drawer */}
         <div className="h-[460px] sm:h-[540px] flex rounded-xl border border-white/10 bg-command-950 overflow-hidden relative">
           <div className="flex-1 h-full min-w-0">
-            <InteractiveMap
-              selectedZoneId={selectedZone?.id}
-              onSelectZone={setSelectedZone}
-              isAuthority={true}
-              className="h-full rounded-none border-0"
-            />
+            <iframe src="/dashboard-map.html" className="w-full h-full border-0" title="Chennai Dashboard Map" />
           </div>
 
           {selectedZone && (
@@ -196,7 +189,7 @@ export const AuthorityDashboard: React.FC = () => {
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-command-950 border border-white/5">
               <div>
                 <span className="font-semibold text-slate-200 block">Doppler Weather Radar</span>
-                <span className="text-[10px] text-slate-400">IMD Hyderabad (10-min sweep)</span>
+                <span className="text-[10px] text-slate-400">DWR Chennai — 5×5m DEM 6–24m</span>
               </div>
               <span className="rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-[10px] font-bold border border-emerald-500/30">
                 CONNECTED
@@ -205,8 +198,8 @@ export const AuthorityDashboard: React.FC = () => {
 
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-command-950 border border-white/5">
               <div>
-                <span className="font-semibold text-slate-200 block">1m LIDAR DEM Terrain</span>
-                <span className="text-[10px] text-slate-400">2D Overland Overland Mesh</span>
+                <span className="font-semibold text-slate-200 block">5×5m DEM Terrain</span>
+                <span className="text-[10px] text-slate-400">Real 6–24m Chennai pilot</span>
               </div>
               <span className="rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-[10px] font-bold border border-emerald-500/30">
                 CONVERGED
@@ -216,7 +209,7 @@ export const AuthorityDashboard: React.FC = () => {
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-command-950 border border-white/5">
               <div>
                 <span className="font-semibold text-slate-200 block">1D Drainage Network</span>
-                <span className="text-[10px] text-slate-400">148 conduits • 412 manholes</span>
+                <span className="text-[10px] text-slate-400">1013 conduits (253 real +760 inferred) • 800 manholes</span>
               </div>
               <span className="rounded-full bg-amber-500/20 text-amber-300 px-2 py-0.5 text-[10px] font-bold border border-amber-500/30">
                 SURCHARGED (18)

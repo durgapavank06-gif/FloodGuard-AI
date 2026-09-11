@@ -91,7 +91,7 @@ export const AuthorityHistory: React.FC = () => {
           title="Max Flood Depth"
           value={timeframeData.maxDepthRecordedCm}
           unit="cm"
-          subtitle="Begumpet Underpass record"
+          subtitle="Velachery 100ft dip record"
           icon={<TrendingUp className="h-5 w-5 text-purple-400" />}
           riskHighlight="high"
         />
@@ -248,7 +248,7 @@ export const AuthorityHistory: React.FC = () => {
           </div>
 
           <div className="mt-4 pt-3 border-t border-white/5 text-[11px] text-slate-400 text-center">
-            Based on historical telemetry recorded at Begumpet & Musi river basins.
+            Based on historical telemetry recorded at Velachery & Adyar river basins.
           </div>
         </div>
       </div>
