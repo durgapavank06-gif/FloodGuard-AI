@@ -3,9 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Underground — Chennai | GPU Water Flow</title>
-<script src="https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/Cesium.js"></script>
-<link href="https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+<script>
+  window.CESIUM_BASE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/cesium/1.119.0/';
+</script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cesium/1.119.0/Widgets/widgets.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cesium/1.119.0/Cesium.js"></script>
+<script>
+if (typeof Cesium === 'undefined') {
+  document.write('<link href="https://cdn.jsdelivr.net/npm/cesium@1.119.0/Build/Cesium/Widgets/widgets.css" rel="stylesheet">');
+  document.write('<script src="https://cdn.jsdelivr.net/npm/cesium@1.119.0/Build/Cesium/Cesium.js"><\/script>');
+}
+</script>
 <style>
 html,body{margin:0;height:100%;overflow:hidden;background:#020208}
 #cesiumContainer{width:100%;height:100%}
@@ -32,6 +40,10 @@ html,body{margin:0;height:100%;overflow:hidden;background:#020208}
 <div id="hud">Precomputed • <b id="flowCount">0</b> pipes flowing • <b id="overflowCount">0</b> overflowing • <b id="particleCount">0</b> GPU particles</div>
 <script src="chennai-data.js"></script>
 <script>
+if (typeof Cesium === 'undefined') {
+  document.body.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#38bdf8;font-family:sans-serif;text-align:center;padding:24px;background:#09090b;"><div style="background:#18181b;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;max-width:440px;"><h3 style="margin-top:0;color:#f87171;">Cesium 3D Engine Failed to Load</h3><p style="color:#a1a1aa;font-size:13px;line-height:1.5;">The 3D WebGL subsystem could not reach the CDN. Please check your internet connection or reload.</p><button onclick="location.reload()" style="background:#0284c7;color:white;border:none;padding:8px 18px;border-radius:6px;cursor:pointer;font-weight:600;margin-top:12px;">Reload Map</button></div></div>';
+  throw new Error("Cesium is not defined - aborting script execution.");
+}
 Cesium.Ion.defaultAccessToken=undefined;
 // --- Viewer (same as before, RTX 4050 keeps high quality) ---
 const viewer=new Cesium.Viewer('cesiumContainer',{
