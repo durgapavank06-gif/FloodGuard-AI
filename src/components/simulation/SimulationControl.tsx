@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSimulation } from '../../context/SimulationContext';
 import { SimulationParams } from '../../types';
-import { Sliders, Play, RotateCcw, Sparkles, CloudRain, Clock, GitBranch, Layers } from 'lucide-react';
+import { Sliders, Play, RotateCcw, Sparkles, CloudRain, Clock, GitBranch, Layers, Wind } from 'lucide-react';
 
 export const SimulationControl: React.FC = () => {
   const {
@@ -126,7 +126,40 @@ export const SimulationControl: React.FC = () => {
         </div>
       </div>
 
-      {/* Slider 3: Drainage Capacity */}
+      {/* Slider 3: Storm Velocity */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-xs">
+          <span className="flex items-center gap-1.5 text-slate-300 font-medium">
+            <Wind className="h-3.5 w-3.5 text-teal-400" />
+            Storm Velocity
+          </span>
+          <span className="font-mono font-bold text-teal-300">
+            {params.stormVelocityMs.toFixed(1)} m/s
+          </span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="12"
+          step="0.5"
+          value={params.stormVelocityMs}
+          onChange={(e) =>
+            setParams((prev) => ({
+              ...prev,
+              stormVelocityMs: Number(e.target.value),
+              scenario: 'custom'
+            }))
+          }
+          className="w-full accent-teal-500 bg-command-950 rounded-lg cursor-pointer h-2"
+        />
+        <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+          <span>0 (Parked)</span>
+          <span>6 m/s</span>
+          <span>12 (Fast passage)</span>
+        </div>
+      </div>
+
+      {/* Slider 4: Drainage Capacity */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-xs">
           <span className="flex items-center gap-1.5 text-slate-300 font-medium">

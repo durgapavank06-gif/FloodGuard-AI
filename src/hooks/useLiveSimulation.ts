@@ -38,12 +38,13 @@ export const useLiveSimulation = (
       setRunning(true);
       setError(null);
       try {
-        const res = await api.simulate(apiUrl, {
-          rainfall_intensity: p.rainfallIntensity,
-          storm_duration: p.forecastDuration,
-          drainage_capacity_pct: p.drainageCapacity,
-          mode: 'real',
-        });
+      const res = await api.simulate(apiUrl, {
+        rainfall_intensity: p.rainfallIntensity,
+        storm_duration: p.forecastDuration,
+        drainage_capacity_pct: p.drainageCapacity,
+        velocity_ms: p.stormVelocityMs ?? 2.5,
+        mode: 'real',
+      });
         setZones(res.zones || []);
         setAggregates((res.aggregates || {}) as Record<string, number>);
       } catch (e) {
@@ -57,7 +58,7 @@ export const useLiveSimulation = (
     [apiUrl]
   );
 
-  const { rainfallIntensity, forecastDuration, drainageCapacity, surfaceRunoff, scenario } = params;
+  const { rainfallIntensity, forecastDuration, drainageCapacity, surfaceRunoff, scenario, stormVelocityMs } = params;
   const auto = opts?.auto ?? false;
   const debounceMs = opts?.debounceMs ?? 800;
 
@@ -77,17 +78,17 @@ export const useLiveSimulation = (
     const delay = firstRun.current ? 0 : debounceMs;
     firstRun.current = false;
     if (delay === 0) {
-      runLive({ rainfallIntensity, forecastDuration, drainageCapacity, surfaceRunoff, scenario });
+      runLive({ rainfallIntensity, forecastDuration, drainageCapacity, surfaceRunoff, scenario, stormVelocityMs });
       return;
     }
     timer.current = setTimeout(() => {
-      runLive({ rainfallIntensity, forecastDuration, drainageCapacity, surfaceRunoff, scenario });
+      runLive({ rainfallIntensity, forecastDuration, drainageCapacity, surfaceRunoff, scenario, stormVelocityMs });
     }, delay);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, apiUrl, auto, debounceMs, rainfallIntensity, forecastDuration, drainageCapacity, surfaceRunoff]);
+  }, [mode, apiUrl, auto, debounceMs, rainfallIntensity, forecastDuration, drainageCapacity, surfaceRunoff, stormVelocityMs]);
 
   return { zones, aggregates, running, error, isLive: mode === 'real', attempted, runLive };
 };

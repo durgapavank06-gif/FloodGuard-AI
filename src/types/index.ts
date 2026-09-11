@@ -113,6 +113,7 @@ export interface SimulationParams {
   rainfallIntensity: number; // 10 - 140 mm/hr
   forecastDuration: number; // 30 - 180 min
   drainageCapacity: number; // 20 - 100 %
+  stormVelocityMs: number; // 0 - 12 m/s storm advection (NE)
   surfaceRunoff: 'low' | 'medium' | 'high';
   scenario: 'custom' | 'cloudburst_2020' | 'monsoon_surge' | 'drain_failure' | 'optimal_drainage';
 }

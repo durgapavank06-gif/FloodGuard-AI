@@ -16,6 +16,7 @@ const defaultParams: SimulationParams = {
   rainfallIntensity: 68, // mm/hr
   forecastDuration: 90, // minutes
   drainageCapacity: 75, // %
+  stormVelocityMs: 2.5, // m/s storm advection
   surfaceRunoff: 'high',
   scenario: 'custom'
 };
@@ -86,6 +87,7 @@ export const SimulationProvider: React.FC<{ children: ReactNode }> = ({ children
           rainfallIntensity: 125,
           forecastDuration: 150,
           drainageCapacity: 45,
+          stormVelocityMs: 3.5,
           surfaceRunoff: 'high',
           scenario: 'cloudburst_2020'
         });
@@ -95,6 +97,7 @@ export const SimulationProvider: React.FC<{ children: ReactNode }> = ({ children
           rainfallIntensity: 85,
           forecastDuration: 120,
           drainageCapacity: 65,
+          stormVelocityMs: 5.0,
           surfaceRunoff: 'high',
           scenario: 'monsoon_surge'
         });
@@ -104,6 +107,7 @@ export const SimulationProvider: React.FC<{ children: ReactNode }> = ({ children
           rainfallIntensity: 55,
           forecastDuration: 90,
           drainageCapacity: 25,
+          stormVelocityMs: 1.5,
           surfaceRunoff: 'medium',
           scenario: 'drain_failure'
         });
@@ -113,6 +117,7 @@ export const SimulationProvider: React.FC<{ children: ReactNode }> = ({ children
           rainfallIntensity: 45,
           forecastDuration: 60,
           drainageCapacity: 95,
+          stormVelocityMs: 2.0,
           surfaceRunoff: 'low',
           scenario: 'optimal_drainage'
         });

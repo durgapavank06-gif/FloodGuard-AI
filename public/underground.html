@@ -25,7 +25,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#020208}
 <div id="ctrl">
   <div style="font-weight:700;letter-spacing:0.1em;font-size:10px;margin-bottom:6px">WATER SIM — RTX 4050 GPU</div>
   <div class="row"><label>Pipe Flow</label><input id="pipeToggle" type="checkbox" checked></div>
-  <div class="row"><label>Rainfall</label><input id="rainSlider" type="range" min="10" max="140" value="72"><span id="rainVal" style="color:#38bdf8">72 mm/h</span></div>
+  <div class="row" id="rainRow"><label>Rainfall</label><input id="rainSlider" type="range" min="10" max="140" value="72"><span id="rainVal" style="color:#38bdf8">72 mm/h</span></div>
   <div class="row"><label>LOD</label><span id="lodVal" style="opacity:0.6">auto</span></div>
   <div style="opacity:0.5;font-size:9px;margin-top:6px">No Entity-per-particle • Primitive + ParticleSystem</div>
 </div>
@@ -78,6 +78,10 @@ MANHOLES.forEach(m=>{
 // ============================================================
 let rainfallIntensity = 72; // mm/h, driven by slider / chennai-data.js
 if(typeof RAINFALL_PROFILE!=='undefined' && RAINFALL_PROFILE.length) rainfallIntensity = Math.max(...RAINFALL_PROFILE.map(r=>r.intensity));
+// External steering (Simulation-page embed; standalone defaults keep current behavior)
+let drainagePct = 75;   // operational capacity % → scales manhole capacity
+let leadMinutes = 90;   // forecast lead → scales surface accumulation buildup
+function durationFactor(){ return 0.7 + (leadMinutes/180)*0.6; }
 // Precompute cache
 const pipeCache = []; // {id, positions, length, flow, speed, density}
 const manholeCache = new Map(); // id -> {coords, elevation, inflow, capacity, excess, state, surfaceDir, surfaceDist}
@@ -115,7 +119,7 @@ function precomputeManholes(){
   manholeCache.clear();
   MANHOLES.forEach(m=>{
     const inflow = inflowForManhole(m.id);
-    const capacity = 38 + m.elevation*1.8 + (Math.random()*6); // base + elevation
+    const capacity = (38 + m.elevation*1.8 + (Math.random()*6)) * (drainagePct/75); // silt derating
     const excess = inflow - capacity;
     let state='normal';
     if(excess>12) state='critical';
@@ -130,7 +134,7 @@ function precomputeManholes(){
     });
     const dir = bestElev < m.elevation ? [best[0]-m.coords[0], best[1]-m.coords[1]] : null;
     if(dir){ const L=Math.hypot(dir[0],dir[1])||1; dir[0]/=L; dir[1]/=L; }
-    const floodDepth = excess>0 ? Math.min(42, excess*1.8 + (10 - m.elevation)*0.6) : 0; // cm
+    const floodDepth = excess>0 ? Math.min(42, excess*1.8 + (10 - m.elevation)*0.6) * durationFactor() : 0; // cm
     manholeCache.set(m.id, {coords:m.coords, elevation:m.elevation, inflow, capacity, excess, state, dir, dist: dist||40, floodDepth});
   });
 }
@@ -348,12 +352,35 @@ let t=0;
 let pipeVisible=true;
 document.getElementById('pipeToggle').addEventListener('change',e=>{ pipeVisible=e.target.checked; if(flowPrimReal) flowPrimReal.show=pipeVisible; if(flowPrimInf) flowPrimInf.show=pipeVisible; });
 document.getElementById('rainSlider').addEventListener('input',e=>{
-  rainfallIntensity=parseInt(e.target.value,10);
+  applyRainfall(parseInt(e.target.value,10));
+});
+function applyRainfall(v){
+  rainfallIntensity = Math.max(10, Math.min(140, v));
+  const slider=document.getElementById('rainSlider');
+  if(slider) slider.value=rainfallIntensity;
   document.getElementById('rainVal').textContent=rainfallIntensity+' mm/h';
   precomputePipes(); precomputeManholes();
   createPipeFlowPrimitives(); createManholeWater(); createSurfaceWater(); updateOverflowTargets();
   document.getElementById('flowCount').textContent = pipeCache.filter(p=>p.intensity>0.15).length;
-});
+}
+
+// ---- External control (Simulation page embed): outer bar replaces inbuilt slider ----
+const _embedParams = new URLSearchParams(window.location.search);
+const EMBED_SIM = _embedParams.get('embed')==='sim';
+if(EMBED_SIM){
+  // Hide the entire inbuilt control box — the outer Simulation-page bar is the single truth
+  const ctrl=document.getElementById('ctrl');
+  if(ctrl) ctrl.style.display='none';
+  let _rainTimer=null;
+  window.addEventListener('message', ev=>{
+    const d=ev && ev.data;
+    if(!d || d.type!=='FLOODGUARD_RAIN' || typeof d.intensity!=='number') return;
+    if(typeof d.drainage==='number') drainagePct = Math.max(20, Math.min(100, d.drainage));
+    if(typeof d.duration==='number') leadMinutes = Math.max(30, Math.min(180, d.duration));
+    if(_rainTimer) clearTimeout(_rainTimer);
+    _rainTimer=setTimeout(()=>{ applyRainfall(d.intensity); }, 200);
+  });
+}
 
 function lodFactor(){
   const h = viewer.camera.positionCartographic ? viewer.camera.positionCartographic.height : 1200;

@@ -1,13 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { SimulationControl } from '../../components/simulation/SimulationControl';
 import { BeforeAfterView } from '../../components/simulation/BeforeAfterView';
 import { LiveSimulationPanel } from '../../components/simulation/LiveSimulationPanel';
 import { DataModeToggle } from '../../components/common/DataModeToggle';
-import { InteractiveMap } from '../../components/map/InteractiveMap';
 import { useSimulation } from '../../context/SimulationContext';
 import { useDataMode } from '../../context/DataModeContext';
 import { useLiveSimulation } from '../../hooks/useLiveSimulation';
-import { mergeLiveZones } from '../../utils/mergeZones';
 import {
   SlidersHorizontal,
   Map,
@@ -21,8 +19,33 @@ export const AuthoritySimulation: React.FC = () => {
   // REAL mode: auto re-solve the coupled model (debounced) as sliders move.
   // FAKE mode: hook stays idle and the map falls back to the demo profile.
   const live = useLiveSimulation(params, { auto: true });
-  const mapZones = useMemo(() => mergeLiveZones(live.zones), [live.zones]);
   const showingLive = mode === 'real' && live.zones !== null;
+  const cesiumRef = useRef<HTMLIFrameElement>(null);
+
+  // Drive the embedded Cesium water sim with the OUTER bars.
+  // The inbuilt control box is hidden inside the iframe (?embed=sim).
+  useEffect(() => {
+    const payload = {
+      type: 'FLOODGUARD_RAIN',
+      intensity: params.rainfallIntensity,
+      drainage: params.drainageCapacity,
+      duration: params.forecastDuration,
+    };
+    const send = () => {
+      try {
+        cesiumRef.current?.contentWindow?.postMessage(payload, '*');
+      } catch {
+        /* noop */
+      }
+    };
+    send();
+    const t1 = setTimeout(send, 1200);
+    const t2 = setTimeout(send, 3500);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [params.rainfallIntensity, params.drainageCapacity, params.forecastDuration]);
 
   return (
     <div className="space-y-6 pb-12">
@@ -99,10 +122,11 @@ export const AuthoritySimulation: React.FC = () => {
             </div>
 
             <div className="h-96 rounded-xl overflow-hidden border border-white/10 bg-command-950">
-              <InteractiveMap
-                isAuthority={true}
-                className="h-full rounded-none border-0"
-                zones={mapZones}
+              <iframe
+                ref={cesiumRef}
+                src="/underground.html?embed=sim"
+                className="w-full h-full border-0"
+                title="Cesium 3D Subsurface Twin (driven by outer rainfall bar)"
               />
             </div>
             {mode === 'real' && live.error && (

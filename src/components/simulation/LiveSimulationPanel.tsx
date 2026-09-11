@@ -40,7 +40,7 @@ export const LiveSimulationPanel: React.FC<LiveSimulationPanelProps> = ({ live, 
         <div className="flex items-center gap-2">
           <Cpu className="h-4 w-4 text-cyan-400" />
           <h3 className="text-xs font-bold uppercase tracking-wider text-white font-mono">
-            Live Coupled-Model Run — {params.rainfallIntensity} mm/h, {params.forecastDuration} min, {params.drainageCapacity}% drainage
+            Live Coupled-Model Run — {params.rainfallIntensity} mm/h, {params.stormVelocityMs.toFixed(1)} m/s, {params.forecastDuration} min, {params.drainageCapacity}% drainage
           </h3>
         </div>
         <button
