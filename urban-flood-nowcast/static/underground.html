@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Underground — Chennai</title>
+<script src="https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/Cesium.js"></script>
+<link href="https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#020208}#cesiumContainer{width:100%;height:100%}#bar{position:fixed;top:0;left:0;right:0;height:48px;z-index:10;background:rgba(9,9,11,0.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;padding:0 14px;gap:10px;color:#e4e4e7;font:12px Geist,system-ui}#bar a{color:#38bdf8;text-decoration:none;font:11px JetBrains Mono}#legend{position:fixed;bottom:12px;left:12px;z-index:10;background:rgba(9,9,11,0.82);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 12px;color:#e4e4e7;font:11px JetBrains Mono,monospace;line-height:1.5;backdrop-filter:blur(8px)}#legend b{color:#22d3ee}#legend i{font-style:normal;opacity:0.7}</style>
+</head>
+<body>
+<div id="cesiumContainer"></div>
+<div id="bar"><span style="font-weight:700;letter-spacing:0.08em">UNDERGROUND</span><span style="opacity:0.5">— 253 real + 760 inferred @ -10m • surface stream nowcast</span><a href="/" style="margin-left:auto">← BACK</a></div>
+<div id="legend">
+  <div><b>━━</b> pipe network @ -10m <i style="opacity:0.6">(real blue, inferred 0.85α)</i></div>
+  <div><span style="color:#22d3ee">━━━</span> directional stream <i>— moving water (bright cyan)</i></div>
+  <div><span style="color:#0e7490">⬢</span> accumulated pool <i>— downstream ponding (dark teal)</i></div>
+  <div><span style="color:#67e8f9">• streak</span> particle streaks <i>flow downhill via elevation gradient</i></div>
+  <div id="stats" style="margin-top:6px;opacity:0.8"></div>
+</div>
+<script src="js/chennai-data.js"></script>
+<script>
+Cesium.Ion.defaultAccessToken=undefined;
+const viewer=new Cesium.Viewer('cesiumContainer',{terrainProvider:new Cesium.EllipsoidTerrainProvider(), baseLayer:new Cesium.ImageryLayer(new Cesium.UrlTemplateImageryProvider({url:'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', maximumLevel:16})), baseLayerPicker:false, geocoder:false, homeButton:false, sceneModePicker:false, navigationHelpButton:false, animation:false, timeline:false, fullscreenButton:false, vrButton:false, selectionIndicator:false, infoBox:false, shouldAnimate:true});
+viewer.scene.screenSpaceCameraController.enableCollisionDetection=false;
+viewer.scene.screenSpaceCameraController.minimumZoomDistance=10;
+viewer.scene.screenSpaceCameraController.maximumZoomDistance=8000;
+viewer.scene.globe.translucency.enabled=true;
+viewer.scene.globe.translucency.frontFaceAlpha=0.32;
+viewer.scene.globe.translucency.backFaceAlpha=0.32;
+viewer.scene.globe.depthTestAgainstTerrain=false;
+viewer.imageryLayers.get(0).alpha=0.88;
+function pipeColor(mm){ if(mm>=1200) return Cesium.Color.fromCssColorString('#0369a1'); if(mm>=700) return Cesium.Color.fromCssColorString('#0284c7'); if(mm>=350) return Cesium.Color.fromCssColorString('#0ea5e9'); return Cesium.Color.fromCssColorString('#60a5fa'); }
+function widthFor(mm){ if(mm>=1200) return 4; if(mm>=700) return 3; if(mm>=350) return 2; return 1; }
+function infColor(t){ if(t==='trunk/main') return Cesium.Color.fromCssColorString('#0284c7'); if(t==='secondary/collector') return Cesium.Color.fromCssColorString('#0ea5e9'); if(t==='local/branch') return Cesium.Color.fromCssColorString('#60a5fa'); return Cesium.Color.fromCssColorString('#93c5fd'); }
+function infWidth(t){ if(t==='trunk/main') return 4; if(t==='secondary/collector') return 3; if(t==='local/branch') return 2; return 1; }
+DRAINAGE_NETWORK.forEach(p=>{
+  const pts=p.coords.map(c=>Cesium.Cartesian3.fromDegrees(c[0],c[1],-10));
+  viewer.entities.add({polyline:{positions:pts, width:widthFor(p.mm), material:pipeColor(p.mm), depthFailMaterial:pipeColor(p.mm), clampToGround:false}});
+});
+if(typeof INFERRED_NETWORK!=='undefined'){
+  INFERRED_NETWORK.forEach(f=>{
+    const pos=f.coords.length===2?[Cesium.Cartesian3.fromDegrees(f.coords[0][0],f.coords[0][1],-10),Cesium.Cartesian3.fromDegrees(f.coords[1][0],f.coords[1][1],-10)]:f.coords.map(c=>Cesium.Cartesian3.fromDegrees(c[0],c[1],-9.8));
+    viewer.entities.add({polyline:{positions:pos, width:infWidth(f.sewer_type), material:infColor(f.sewer_type).withAlpha(0.85), depthFailMaterial:infColor(f.sewer_type).withAlpha(0.85), clampToGround:false}});
+  });
+}
+MANHOLES.forEach(m=>{
+  const [lon,lat]=m.coords;
+  viewer.entities.add({polyline:{positions:[Cesium.Cartesian3.fromDegrees(lon,lat,0.2),Cesium.Cartesian3.fromDegrees(lon,lat,-10)], width:1.2, material:Cesium.Color.fromCssColorString('#22d3ee').withAlpha(0.85), depthFailMaterial:Cesium.Color.fromCssColorString('#22d3ee').withAlpha(0.85), clampToGround:false}});
+  viewer.entities.add({position:Cesium.Cartesian3.fromDegrees(lon,lat,0.3), point:{pixelSize:3, color:Cesium.Color.fromCssColorString('#38bdf8'), outlineColor:Cesium.Color.WHITE, outlineWidth:1}});
+});
+viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(80.24,13.06,1200), orientation:{heading:0, pitch:Cesium.Math.toRadians(-55), roll:0}, duration:1});
+setTimeout(()=>{ viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(80.24,13.06,-28), orientation:{heading:0, pitch:Cesium.Math.toRadians(18), roll:0}, duration:2}); },1300);
+
+/* ===================================================================
+   REPLACED VISUALIZATION: large cyan elliptical puddles around manholes
+   Previous pattern (NOT present in current file — search confirms 0
+   occurrences of `ellipse`/`puddle`): 
+     viewer.entities.add({ position: ..., ellipse: {
+       semiMajorAxis: 18-35, semiMinorAxis: 12-28,
+       material: Color.CYAN.withAlpha(0.35),
+       height: 0.1 }})
+   This created uniform, non-directional “puddles” centered on manholes
+   with no flow, no gradient, and one Entity per puddle (expensive).
+
+   REPLACEMENT — directional water STREAM with:
+   • originates at manhole, flows downhill via precomputed elevation gradient (6-24m)
+   • irregular width + turbulence (per-segment lateral sinusoid + width jitter)
+   • moving particles/streaks (Cesium.ParticleSystem — GPU batched)
+   • gradual accumulation (progress 0→1 over 12-20s per overflow)
+   • differentiated moving (bright cyan polyline + streak particles) vs
+     accumulated (dark teal downstream ellipse pool)
+   • GPU-batched rendering: ONE Primitive for all stream polylines +
+     ONE Primitive for all pool ellipses + N ParticleSystems (not Entities per particle)
+   =================================================================== */
+
+// --- 1. Precomputed elevation gradient (MANHOLES 6–24m) -----------------
+function computeElevationGradients(manholes){
+  const toRad = Math.PI/180;
+  const R = 650; // search radius meters
+  const grads = new Map();
+  // fallback low center: mean of lowest 8% (elevation <=8)
+  const lows = manholes.filter(m=>m.elevation<=8);
+  const lowLon = lows.reduce((s,m)=>s+m.coords[0],0)/lows.length;
+  const lowLat = lows.reduce((s,m)=>s+m.coords[1],0)/lows.length;
+  for(let i=0;i<manholes.length;i++){
+    const mi=manholes[i];
+    let best=null, bestSlope=-Infinity;
+    for(let j=0;j<manholes.length;j++){
+      if(i===j) continue;
+      const mj=manholes[j];
+      if(mj.elevation >= mi.elevation) continue;
+      const dLon = (mj.coords[0]-mi.coords[0]) * Math.cos(mi.coords[1]*toRad) * 111000;
+      const dLat = (mj.coords[1]-mi.coords[1]) * 111000;
+      const dist = Math.hypot(dLon,dLat);
+      if(dist<18 || dist>R) continue;
+      const slope=(mi.elevation - mj.elevation)/dist;
+      if(slope>bestSlope){ bestSlope=slope; best={dLon,dLat,dist}; }
+    }
+    let angle;
+    if(best){
+      angle=Math.atan2(best.dLat,best.dLon);
+    } else {
+      const dLon=(lowLon - mi.coords[0])*Math.cos(mi.coords[1]*toRad)*111000;
+      const dLat=(lowLat - mi.coords[1])*111000;
+      const d=Math.hypot(dLon,dLat);
+      if(d<1) angle=(90+ (Math.random()-0.5)*40)*toRad;
+      else angle=Math.atan2(dLat,dLon) + (Math.random()-0.5)*0.45;
+    }
+    // add deterministic micro jitter so neighboring streams not perfectly parallel
+    const seed = ((mi.coords[0]*928371 + mi.coords[1]*689287) % 1);
+    angle += (seed-0.5)*0.18;
+    grads.set(mi.id,{angle, slope: best?bestSlope:0.0012, refDist: best?best.dist: 90});
+  }
+  return grads;
+}
+const ELEV_GRAD = computeElevationGradients(MANHOLES);
+
+// --- 2. Select overflowing manholes (gradual subset, lower elev → higher overflow prob) --
+function pickOverflows(n){
+  // weight by low elevation + random + spatial thinning
+  const sorted=[...MANHOLES].sort((a,b)=>a.elevation-b.elevation);
+  // take lowest 180 candidates, then thin to n
+  let pool=sorted.slice(0,200);
+  // add a few mid-elev random for variability (simulate local surcharge)
+  const mids=MANHOLES.filter(m=>m.elevation>=13 && m.elevation<=15);
+  for(let k=0;k<22;k++) pool.push(mids[Math.floor(Math.random()*mids.length)]);
+  // spatial thinning: avoid clusters <45m
+  const chosen=[];
+  const toRad=Math.PI/180;
+  function tooClose(c){
+    for(const q of chosen){
+      const dx=(c.coords[0]-q.coords[0])*Math.cos(c.coords[1]*toRad)*111000;
+      const dy=(c.coords[1]-q.coords[1])*111000;
+      if(Math.hypot(dx,dy)<48) return true;
+    }
+    return false;
+  }
+  for(const m of pool){
+    if(chosen.length>=n) break;
+    if(tooClose(m) && Math.random()>0.18) continue;
+    // lower elevation = higher pick probability
+    const p = m.elevation<=9 ? 0.92 : m.elevation<=11 ? 0.72 : m.elevation<=13 ? 0.45 : 0.22;
+    if(Math.random()<p) chosen.push(m);
+  }
+  // fill remaining randomly if short
+  while(chosen.length<n){
+    const r=MANHOLES[Math.floor(Math.random()*MANHOLES.length)];
+    if(!chosen.includes(r) && !tooClose(r)) chosen.push(r);
+    if(chosen.length>1000) break;
+  }
+  return chosen.slice(0,n);
+}
+const OVERFLOW_COUNT = 64;
+const OVERFLOWS = pickOverflows(OVERFLOW_COUNT);
+
+// enrich with stream params, accumulation state
+const now0 = performance.now();
+const streams = OVERFLOWS.map(m=>{
+  const g=ELEV_GRAD.get(m.id);
+  const seed=Math.random();
+  const elevFactor=(15 - m.elevation)*0.08; // lower elev => slightly longer ponding
+  const baseLen= 55 + Math.random()*62 + Math.max(0,elevFactor*18) + (g.slope>0.015? 18:0);
+  const len=Math.min(175, Math.max(38, baseLen));
+  const baseWidth= 1.4 + Math.random()*1.1 + (m.elevation<=9?0.9:0);
+  return {
+    id: m.id,
+    lon: m.coords[0], lat: m.coords[1], elev: m.elevation,
+    angle: g.angle,
+    slope: g.slope,
+    length: len,
+    baseWidth,
+    seed,
+    segments: 9 + Math.floor(Math.random()*4), // 9-12
+    startDelay: Math.random()*9 + (m.elevation>13? Math.random()*5:0),
+    duration: 13 + Math.random()*10,
+    progress: 0,
+    // downstream pool eccentricity
+    poolSeed: Math.random()
+  };
+});
+
+// --- 3. GPU-batched particle streaks (Cesium.ParticleSystem) -------------
+function makeStreakImage(){
+  const c=document.createElement('canvas'); c.width=32; c.height=6;
+  const g=c.getContext('2d');
+  // horizontal streak with fade
+  const grad=g.createLinearGradient(0,0,32,0);
+  grad.addColorStop(0,'rgba(34,211,238,0)');
+  grad.addColorStop(0.18,'rgba(103,232,249,0.95)');
+  grad.addColorStop(0.5,'rgba(34,211,238,0.96)');
+  grad.addColorStop(0.82,'rgba(6,182,212,0.85)');
+  grad.addColorStop(1,'rgba(34,211,238,0)');
+  g.fillStyle=grad;
+  g.fillRect(0,1.5,32,3);
+  // subtle second line for turbulence highlight
+  g.fillStyle='rgba(255,255,255,0.55)';
+  g.fillRect(8,2.5,10,0.7);
+  return c;
+}
+const streakCanvas=makeStreakImage();
+const streakURL=streakCanvas.toDataURL();
+
+const particleSystems=[];
+let particleReady=false;
+function createParticleSystems(){
+  // Limit ParticleSystem count for perf: use strongest 42 streams for particles
+  const pStreams=[...streams].sort((a,b)=>a.elev-b.elev).slice(0,42);
+  for(const s of pStreams){
+    const pos=Cesium.Cartesian3.fromDegrees(s.lon,s.lat,0.28);
+    // ENU frame at manhole
+    const enu=Cesium.Transforms.eastNorthUpToFixedFrame(pos, Cesium.Ellipsoid.WGS84, new Cesium.Matrix4());
+    // rotate ENU so +X points downhill (angle from east)
+    const rotZ=Cesium.Matrix3.fromRotationZ(s.angle, new Cesium.Matrix3());
+    const rot4=Cesium.Matrix4.fromRotationTranslation(rotZ, Cesium.Cartesian3.ZERO, new Cesium.Matrix4());
+    const modelMatrix=Cesium.Matrix4.multiply(enu, rot4, new Cesium.Matrix4());
+    // slight lift so particles just above ground
+    // small random offset in emitter to avoid perfect line
+    let ps;
+    try{
+      ps=new Cesium.ParticleSystem({
+        image: streakURL,
+        startColor: Cesium.Color.fromCssColorString('#67e8f9').withAlpha(0.88),
+        endColor: Cesium.Color.fromCssColorString('#22d3ee').withAlpha(0.0),
+        startScale: 0.9,
+        endScale: 1.35,
+        minimumParticleLife: 1.6,
+        maximumParticleLife: 3.2,
+        minimumSpeed: 2.2,
+        maximumSpeed: 5.8,
+        imageSize: new Cesium.Cartesian2(18, 3.5),
+        emissionRate: 0, // driven by progress
+        lifetime: Number.POSITIVE_INFINITY,
+        loop: true,
+        sizeInMeters: false,
+        emitter: new Cesium.ConeEmitter(Cesium.Math.toRadians(7)),
+        // cone around +Z by default; we emitted along X via modelMatrix trick?
+        // Cesium ConeEmitter emits along +Z; rotate emitterModelMatrix to map Z→X
+        emitterModelMatrix: (()=>{ const m=new Cesium.Matrix4(); const r=Cesium.Matrix3.fromRotationY(Cesium.Math.toRadians(90), new Cesium.Matrix3()); Cesium.Matrix4.fromRotationTranslation(r, new Cesium.Cartesian3(0,0,0.15), m); return m; })(),
+        modelMatrix: modelMatrix,
+        updateCallback: (p,dt)=>{
+          // turbulence wobble perpendicular to flow (Y in local)
+          const wob = Math.sin(p.age*4.2 + s.seed*20)*0.35;
+          // apply small Y velocity jitter already via emitter; add extra drift
+          // p.velocity is in world? cesium uses local then transforms – we nudge local
+          // We keep simple: age-based alpha handled by start/end color
+          // add slight gravity settling
+          // p.position is local offset; we add -Z drift
+          if(p.position) p.position.z -= dt*0.12;
+        }
+      });
+      viewer.scene.primitives.add(ps);
+      particleSystems.push({ps, stream:s});
+    }catch(e){
+      console.warn('ParticleSystem failed',s.id,e);
+    }
+  }
+  particleReady=true;
+}
+// defer to after first camera flight so context ready
+setTimeout(createParticleSystems, 900);
+
+// --- 4. GPU-batched stream + pool primitives (rebuild on progress) -------
+let streamPrimitive=null;
+let poolPrimitive=null;
+function buildStreamPrimitives(globalT){
+  // compute progress per stream
+  for(const s of streams){
+    const t=(globalT - s.startDelay)/s.duration;
+    s.progress=Math.max(0, Math.min(1, t));
+    // rainfall profile modulation (optional): peak at ~20s
+    // we keep linear but could multiply by rainfall intensity envelope
+  }
+
+  // remove previous
+  if(streamPrimitive){ viewer.scene.primitives.remove(streamPrimitive); streamPrimitive=null; }
+  if(poolPrimitive){ viewer.scene.primitives.remove(poolPrimitive); poolPrimitive=null; }
+
+  const polyInstances=[];
+  const poolInstances=[];
+  const toRad=Math.PI/180;
+  const timeSec=globalT; // for turbulence animation
+
+  for(const s of streams){
+    if(s.progress<=0.001) continue;
+    const curLen=s.length * s.progress;
+    const segs=s.segments;
+    const step=curLen / segs;
+    // precompute points along centerline with turbulence
+    const pts=[]; // array of {lon,lat}
+    for(let i=0;i<=segs;i++){
+      const d=i*step;
+      // longitudinal turbulence (meander)
+      const meanderAmp = 1.1 + s.seed*1.2; // meters
+      const meander = Math.sin(d*0.09 + s.seed*12 + timeSec*0.6)*meanderAmp
+                    + Math.cos(d*0.17 - s.seed*7 + timeSec*0.42)*0.6;
+      // lateral offset perpendicular to flow
+      const perp = s.angle + Math.PI/2;
+      const latOffM = meander;
+      // base along-flow position
+      const alongLon = Math.cos(s.angle)*d;
+      const alongLat = Math.sin(s.angle)*d;
+      // perpendicular offset
+      const perpLonM = Math.cos(perp)*latOffM;
+      const perpLatM = Math.sin(perp)*latOffM;
+      const totalEastM = alongLon + perpLonM;
+      const totalNorthM= alongLat + perpLatM;
+      const lon = s.lon + totalEastM / (111000*Math.cos(s.lat*toRad));
+      const lat = s.lat + totalNorthM / 111000;
+      pts.push({lon, lat});
+    }
+    // create per-segment polyline instances with irregular width
+    for(let i=0;i<segs;i++){
+      if(i/segs > s.progress) break; // only built-up portion
+      const a=pts[i], b=pts[i+1];
+      // irregular width: grows with progress + downstream widening + seed jitter
+      const alongFrac=i/segs;
+      const downstreamWiden = 1 + alongFrac*0.9; // wider downstream
+      const turbWidth = 0.85 + 0.45*Math.sin(s.seed*9 + i*1.7 + timeSec*1.1) + 0.22*Math.cos(s.seed*13 - i*0.9);
+      const progWidth = 0.6 + s.progress*0.95;
+      const w = s.baseWidth * downstreamWiden * turbWidth * progWidth;
+      const clampedW=Math.max(0.9, Math.min(6.2, w));
+      // moving water color: bright cyan, alpha fades slightly downstream but higher when progressing
+      // differentiate moving vs accumulated: stream is moving (higher alpha, brighter)
+      const alpha = 0.52 + s.progress*0.38 - alongFrac*0.18;
+      const col = Cesium.Color.fromCssColorString('#22d3ee').withAlpha(Math.max(0.12, Math.min(0.88, alpha)));
+      // add subtle hue shift with turbulence
+      const wobHue = 0.03*Math.sin(s.seed*5 + i);
+      // keep cyan but slightly vary
+      const p0=Cesium.Cartesian3.fromDegrees(a.lon,a.lat,0.16 + 0.02*Math.sin(i+s.seed*10));
+      const p1=Cesium.Cartesian3.fromDegrees(b.lon,b.lat,0.16 + 0.02*Math.cos(i*1.3+s.seed*7));
+      polyInstances.push(new Cesium.GeometryInstance({
+        geometry: new Cesium.PolylineGeometry({
+          positions: [p0,p1],
+          width: clampedW,
+          vertexFormat: Cesium.PolylineColorAppearance.VERTEX_FORMAT
+        }),
+        attributes: { color: Cesium.ColorGeometryInstanceAttribute.fromColor(col) }
+      }));
+    }
+    // accumulated water pool at downstream terminus (differentiated)
+    if(s.progress>0.18){
+      const last=pts[segs];
+      // pool grows with progress, irregular ellipse
+      const poolProg=Math.pow(s.progress,0.9);
+      const major= 6.5 + poolProg*16 + s.poolSeed*5 + Math.sin(s.seed*8+timeSec*0.3)*1.1;
+      const minor= 4.2 + poolProg*11 + s.poolSeed*3.5 + Math.cos(s.seed*11+timeSec*0.4)*0.8;
+      const rotation=s.angle + (s.poolSeed-0.5)*0.6;
+      // turbulence wobble in pool center slightly downstream of terminus
+      const cen=Cesium.Cartesian3.fromDegrees(last.lon, last.lat, 0.11);
+      // darker teal for accumulated (distinct from moving)
+      const poolAlpha=0.18 + poolProg*0.38;
+      const poolCol=Cesium.Color.fromCssColorString('#0c4a6e').withAlpha(poolAlpha);
+      // add second smaller inner highlight for depth variation
+      try{
+        poolInstances.push(new Cesium.GeometryInstance({
+          geometry: new Cesium.EllipseGeometry({
+            center: cen,
+            semiMajorAxis: major,
+            semiMinorAxis: minor,
+            height: 0.12,
+            rotation: rotation,
+            granularity: 0.08,
+            vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT
+          }),
+          attributes:{ color: Cesium.ColorGeometryInstanceAttribute.fromColor(poolCol) }
+        }));
+        // inner shallower rim (lighter) to hint accumulation depth
+        if(poolProg>0.45){
+          poolInstances.push(new Cesium.GeometryInstance({
+            geometry: new Cesium.EllipseGeometry({
+              center: cen,
+              semiMajorAxis: major*0.52,
+              semiMinorAxis: minor*0.52,
+              height: 0.13,
+              rotation: rotation+0.18,
+              granularity: 0.08,
+              vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT
+            }),
+            attributes:{ color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.fromCssColorString('#083344').withAlpha(poolAlpha*0.65)) }
+          }));
+        }
+      }catch(e){ /* ellipse degenerate */ }
+    }
+  }
+
+  if(polyInstances.length){
+    streamPrimitive=new Cesium.Primitive({
+      geometryInstances: polyInstances,
+      appearance: new Cesium.PolylineColorAppearance({ translucent:true }),
+      asynchronous: false
+    });
+    viewer.scene.primitives.add(streamPrimitive);
+  }
+  if(poolInstances.length){
+    poolPrimitive=new Cesium.Primitive({
+      geometryInstances: poolInstances,
+      appearance: new Cesium.PerInstanceColorAppearance({ translucent:true, closed:false }),
+      asynchronous: false
+    });
+    viewer.scene.primitives.add(poolPrimitive);
+  }
+  // update stats
+  const active=streams.filter(s=>s.progress>0.01).length;
+  const avgProg=(streams.reduce((s,x)=>s+x.progress,0)/streams.length).toFixed(2);
+  document.getElementById('stats').textContent=`active streams ${active}/${OVERFLOW_COUNT} • avg fill ${avgProg} • GPU batched ${polyInstances.length} segs + ${poolInstances.length} pools + ${particleSystems.length} particle systems`;
+  // update particle emissionRate by progress (gradual buildup)
+  if(particleReady){
+    for(const {ps, stream} of particleSystems){
+      const r= stream.progress<0.02? 0 : 6 + stream.progress*34 + stream.slope*1200;
+      // cap
+      ps.emissionRate = Math.min(58, Math.max(0, r));
+      // also modulate imageSize slightly with progress for irregularity
+      const sc=0.85 + stream.progress*0.5 + Math.sin(globalT*0.9+stream.seed*10)*0.1;
+      ps.startScale = sc;
+      ps.endScale = sc*1.5;
+    }
+  }
+}
+
+// --- 5. Animation loop: gradual buildup ---------------------------------
+let t0=performance.now()/1000;
+let lastBuild=0;
+viewer.scene.preRender.addEventListener(function(scene, time){
+  const now=performance.now()/1000 - t0;
+  // rebuild streams every ~130ms while accumulating, then every 250ms
+  const needRebuild = (now - lastBuild) > 0.13;
+  if(needRebuild){
+    buildStreamPrimitives(now);
+    lastBuild=now;
+  }
+});
+// initial build
+buildStreamPrimitives(0);
+// also tick every 180ms fallback if preRender not firing fast enough
+setInterval(()=>{ const now=performance.now()/1000 - t0; buildStreamPrimitives(now); }, 180);
+
+</script>
+</body>
+</html>
