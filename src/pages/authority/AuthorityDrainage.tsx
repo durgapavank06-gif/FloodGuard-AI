@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { drainageOverview, mockDrainageConduits } from '../../data/drainage';
 import { StatCard } from '../../components/common/StatCard';
 import { DrainageCard } from '../../components/charts/DrainageCard';
-import { DrainageGraph } from '../../components/charts/DrainageGraph';
+import { DrainageMapLibreGraph } from '../../components/drainage/DrainageMapLibreGraph';
 import { NetworkSimProvider, useNetworkSim } from '../../context/NetworkSimContext';
 import { NetworkFlowGraph } from '../../components/drainage/NetworkFlowGraph';
 import { DataModeToggle } from '../../components/common/DataModeToggle';
@@ -128,11 +128,8 @@ const AuthorityDrainageInner: React.FC = () => {
         />
       </div>
 
-      {/* Live manhole→conduit flow graph (real-time hydraulic animation) */}
-      <NetworkFlowGraph />
-
-      {/* Drainage Network Directed Graph Visualization */}
-      <DrainageGraph />
+      {/* MapLibre GIS Drainage Network & At-Risk Surcharged Manhole Detector */}
+      <DrainageMapLibreGraph />
 
       {/* Conduit Telemetry Cards Section */}
       <div className="space-y-4">
