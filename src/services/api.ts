@@ -139,12 +139,12 @@ export const api = {
       `/api/alerts?mode=${mode}${velocity_ms !== undefined ? `&velocity_ms=${velocity_ms}` : ''}`
     ),
   drainageNetwork: (base: string) => req(base, '/api/drainage/network'),
-  fullGraph: (base: string, mode: string) =>
+  fullGraph: (base: string, mode: string, rainfallMmh?: number) =>
     req<{
       mode: string;
       counts: Record<string, number>;
       rainfall_by_zone: Record<string, number>;
       nodes: { id: string; x: number; y: number; type: string; zone: string; status: string; util: number }[];
       edges: { id: string; from: string; to: string; kind: string; zone: string; status: string; util: number; flow: number }[];
-    }>(base, `/api/drainage/graph/full?mode=${mode}`),
+    }>(base, `/api/drainage/graph/full?mode=${mode}${rainfallMmh !== undefined ? `&rainfall_mmh=${Math.round(rainfallMmh)}` : ''}`),
 };

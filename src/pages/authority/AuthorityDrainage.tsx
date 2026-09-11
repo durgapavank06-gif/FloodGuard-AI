@@ -3,6 +3,7 @@ import { drainageOverview, mockDrainageConduits } from '../../data/drainage';
 import { StatCard } from '../../components/common/StatCard';
 import { DrainageCard } from '../../components/charts/DrainageCard';
 import { DrainageGraph } from '../../components/charts/DrainageGraph';
+import { NetworkSimProvider, useNetworkSim } from '../../context/NetworkSimContext';
 import { NetworkFlowGraph } from '../../components/drainage/NetworkFlowGraph';
 import { DataModeToggle } from '../../components/common/DataModeToggle';
 import {
@@ -17,12 +18,38 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
-export const AuthorityDrainage: React.FC = () => {
+export const AuthorityDrainage: React.FC = () => (
+  <NetworkSimProvider>
+    <AuthorityDrainageInner />
+  </NetworkSimProvider>
+);
+
+const AuthorityDrainageInner: React.FC = () => {
   const { addToast } = useApp();
+  const { conduits: liveConduits } = useNetworkSim();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const filteredConduits = mockDrainageConduits.filter((c) => {
+  // Live simulation overrides static mock fields so cards match the graph above
+  const liveDrainageConduits = mockDrainageConduits.map((c) => {
+    const live = liveConduits[c.id];
+    if (!live) return c;
+    return {
+      ...c,
+      status: live.status,
+      capacityPercent: Math.round(live.util * 100),
+      flowRateM3s: Math.round(live.flow * 10) / 10,
+      backflowRisk: live.status === 'surcharged' || live.status === 'critical',
+    };
+  });
+
+  const liveCounts = {
+    critical: liveDrainageConduits.filter((c) => c.status === 'critical' || c.status === 'surcharged').length,
+    near: liveDrainageConduits.filter((c) => c.status === 'near_limit').length,
+    normal: liveDrainageConduits.filter((c) => c.status === 'normal').length,
+  };
+
+  const filteredConduits = liveDrainageConduits.filter((c) => {
     const matchesSearch =
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -78,7 +105,7 @@ export const AuthorityDrainage: React.FC = () => {
 
         <StatCard
           title="Critical Surcharge"
-          value={drainageOverview.critical}
+          value={Object.keys(liveConduits).length ? liveCounts.critical : drainageOverview.critical}
           subtitle="Backflow onto street level"
           riskHighlight="critical"
           icon={<ShieldAlert className="h-5 w-5 text-rose-400" />}
@@ -86,7 +113,7 @@ export const AuthorityDrainage: React.FC = () => {
 
         <StatCard
           title="Near Capacity"
-          value={drainageOverview.nearCapacity}
+          value={Object.keys(liveConduits).length ? liveCounts.near : drainageOverview.nearCapacity}
           subtitle=">80% Cross-section full"
           riskHighlight="moderate"
           icon={<AlertTriangle className="h-5 w-5 text-amber-400" />}
@@ -94,7 +121,7 @@ export const AuthorityDrainage: React.FC = () => {
 
         <StatCard
           title="Normal Operations"
-          value={drainageOverview.normal}
+          value={Object.keys(liveConduits).length ? liveCounts.normal : drainageOverview.normal}
           subtitle="Free gravity discharge"
           riskHighlight="low"
           icon={<CheckCircle2 className="h-5 w-5 text-emerald-400" />}

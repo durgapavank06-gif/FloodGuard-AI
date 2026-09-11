@@ -1,12 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { RefreshCw, Droplets, GitBranch } from 'lucide-react';
 import { FLOW_NODES, FLOW_EDGES, FlowNode, FlowEdge } from '../../data/network-graph';
 import { FullNetworkGraph } from './FullNetworkGraph';
-import { mockDrainageConduits } from '../../data/drainage';
-import { mockRainfallNowcast } from '../../data/rainfall';
 import { useDataMode } from '../../context/DataModeContext';
 import { useApp } from '../../context/AppContext';
-import { api } from '../../services/api';
+import { useNetworkSim } from '../../context/NetworkSimContext';
 
 type ConduitStatus = 'normal' | 'near_limit' | 'critical' | 'surcharged';
 
@@ -55,59 +53,11 @@ function edgePath(f: FlowNode, t: FlowNode, e: FlowEdge): string {
  * nowcast; FAKE = bundled demo inventory.
  */
 export const NetworkFlowGraph: React.FC = () => {
-  const { mode, apiUrl } = useDataMode();
+  const { mode } = useDataMode();
   const { addToast } = useApp();
-  const [conduits, setConduits] = useState<Record<string, ConduitState>>({});
-  const [rainNow, setRainNow] = useState<number>(mockRainfallNowcast[0].rainfallMmHr);
-  const [loading, setLoading] = useState(false);
-  const [tick, setTick] = useState(0);
+  const { intensity, velocity, setIntensity, setVelocity, conduits, rainNow, loading, refetch } = useNetworkSim();
   const [view, setView] = useState<'backbone' | 'full'>('full');
   const isLive = mode === 'real' && Object.keys(conduits).length > 0;
-
-  const load = useCallback(async () => {
-    if (mode === 'fake') {
-      const map: Record<string, ConduitState> = {};
-      for (const c of mockDrainageConduits) {
-        map[c.id] = { status: c.status, util: c.capacityPercent / 100, flow: c.flowRateM3s };
-      }
-      setConduits(map);
-      setRainNow(mockRainfallNowcast[0].rainfallMmHr);
-      return;
-    }
-    setLoading(true);
-    try {
-      const now = await api.nowcast(apiUrl, 'real');
-      const rain = now.series[0]?.rainfallMmHr ?? 50;
-      setRainNow(rain);
-      const hyd = await api.hydraulics(apiUrl, {
-        rainfall_intensity: rain,
-        storm_duration: 60,
-        drainage_capacity_pct: 75,
-        mode: 'real',
-      });
-      const map: Record<string, ConduitState> = {};
-      for (const c of hyd.result.conduits as { id: string; status: ConduitStatus; capacityPercent: number; flowRateM3s: number }[]) {
-        map[c.id] = { status: c.status, util: c.capacityPercent / 100, flow: c.flowRateM3s };
-      }
-      setConduits(map);
-    } catch (err) {
-      addToast('Flow graph offline', `Live hydraulics unreachable (${err}). Retrying…`, 'warning');
-      setConduits({});
-    } finally {
-      setLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, apiUrl, tick]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  useEffect(() => {
-    if (mode === 'fake') return;
-    const id = setInterval(() => setTick((t) => t + 1), 60000);
-    return () => clearInterval(id);
-  }, [mode]);
 
   // Node severity = worst rank of incident modelled conduits
   const nodeRank = useMemo(() => {
@@ -224,7 +174,7 @@ export const NetworkFlowGraph: React.FC = () => {
             nowcast in: {rainNow} mm/h
           </span>
           <button
-            onClick={() => setTick((t) => t + 1)}
+            onClick={refetch}
             className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-command-950 px-2.5 py-1.5 text-[11px] text-slate-300 hover:text-white transition-colors"
             title="Re-solve flows"
           >
@@ -232,6 +182,29 @@ export const NetworkFlowGraph: React.FC = () => {
             Re-solve
           </button>
         </div>
+      </div>
+
+      {/* Storm simulation sliders — drive graph + cards live */}
+      <div className="flex flex-wrap items-center gap-4 mb-3 rounded-xl border border-white/10 bg-command-950 px-3 py-2.5">
+        <label className="flex items-center gap-2 text-[11px] font-mono text-slate-300">
+          <span className="uppercase tracking-wider text-slate-400">Intensity</span>
+          <input
+            type="range" min={5} max={150} value={intensity}
+            onChange={(e) => setIntensity(Number(e.target.value))}
+            className="w-36 accent-cyan-500"
+          />
+          <span className="text-cyan-300 font-bold w-16">{intensity} mm/h</span>
+        </label>
+        <label className="flex items-center gap-2 text-[11px] font-mono text-slate-300">
+          <span className="uppercase tracking-wider text-slate-400">Velocity</span>
+          <input
+            type="range" min={0.2} max={3} step={0.1} value={velocity}
+            onChange={(e) => setVelocity(Number(e.target.value))}
+            className="w-36 accent-teal-500"
+          />
+          <span className="text-teal-300 font-bold w-12">{velocity.toFixed(1)}×</span>
+        </label>
+        {loading && <span className="text-[10px] font-mono text-slate-500">solving…</span>}
       </div>
 
       {view === 'full' ? (
@@ -270,7 +243,7 @@ export const NetworkFlowGraph: React.FC = () => {
               : v.color === '#f97316' ? 'url(#arr-orange)'
               : v.color === '#2dd4bf' ? 'url(#arr-teal)'
               : 'url(#arr-gray)';
-            const speed = Math.max(0.45, Math.min(2.8, 2.8 - v.util * 2.2));
+            const speed = Math.max(0.2, Math.min(2.8, 2.8 - v.util * 2.2)) / velocity;
             const width = e.kind === 'overflow' ? 2.5 : 2 + Math.min(v.flow, 8) * 0.45;
             return (
               <g key={e.id}>

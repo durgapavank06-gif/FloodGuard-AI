@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { RefreshCw, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { useDataMode } from '../../context/DataModeContext';
 import { useApp } from '../../context/AppContext';
+import { useNetworkSim } from '../../context/NetworkSimContext';
 import { api } from '../../services/api';
 
 interface GNode {
@@ -30,6 +31,7 @@ const ZONE_LABELS: Record<string, { x: number; name: string }> = {
 export const FullNetworkGraph: React.FC = () => {
   const { mode, apiUrl } = useDataMode();
   const { addToast } = useApp();
+  const { effectiveRain } = useNetworkSim();
   const [nodes, setNodes] = useState<GNode[]>([]);
   const [edges, setEdges] = useState<GEdge[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -42,7 +44,7 @@ export const FullNetworkGraph: React.FC = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.fullGraph(apiUrl, mode);
+      const res = await api.fullGraph(apiUrl, mode, effectiveRain);
       setNodes(res.nodes);
       setEdges(res.edges);
       setCounts(res.counts || {});
@@ -53,10 +55,12 @@ export const FullNetworkGraph: React.FC = () => {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, apiUrl, tick]);
+  }, [mode, apiUrl, tick, effectiveRain]);
 
   useEffect(() => {
-    load();
+    // Debounced so dragging sliders re-solves live without flooding Flask
+    const timer = setTimeout(load, 400);
+    return () => clearTimeout(timer);
   }, [load]);
 
   useEffect(() => {
